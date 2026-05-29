@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates", static_folder="static")
 
 # ─── CONFIG ─────────────────────────────────────────────────
 app.secret_key = os.environ.get("SECRET_KEY", "zmoto-change-this-in-production-xyz987")
