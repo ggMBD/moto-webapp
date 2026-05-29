@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0f14">
+<title>Z-MOTO — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style_login.css') }}">
+
+</head>
+<body>
+<button class="theme-btn" id="theme-btn">☀️ Light</button>
+<div class="card">
+  <div class="logo">
+    <span class="logo-icon">🏍</span>
+    <span class="logo-name">Z-MOTO</span>
+    <span class="logo-sub">Shop Manager</span>
+  </div>
+  <div class="error" id="err"></div>
+  <div class="form-group">
+    <label class="form-label">Username</label>
+    <input class="form-control" id="username" type="text" placeholder="Enter your username" autocomplete="username" autocapitalize="none">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Password</label>
+    <input class="form-control" id="password" type="password" placeholder="Enter your password" autocomplete="current-password">
+  </div>
+  <button class="btn-login" id="btn-login">SIGN IN →</button>
+</div>
+
+<script>
+  const t = localStorage.getItem('zmoto-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const tb = document.getElementById('theme-btn');
+  tb.textContent = t === 'dark' ? '☀️ Light' : '🌙 Dark';
+  tb.addEventListener('click', () => {
+    const c = document.documentElement.getAttribute('data-theme');
+    const n = c === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', n);
+    localStorage.setItem('zmoto-theme', n);
+    tb.textContent = n === 'dark' ? '☀️ Light' : '🌙 Dark';
+  });
+
+  async function login() {
+    const u = document.getElementById('username').value.trim();
+    const p = document.getElementById('password').value;
+    const err = document.getElementById('err');
+    err.style.display = 'none';
+    if (!u || !p) { err.textContent = 'Please enter username and password.'; err.style.display = 'block'; return; }
+    document.getElementById('btn-login').textContent = 'Signing in…';
+    try {
+      const r = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username:u,password:p}) });
+      const d = await r.json();
+      if (!r.ok) { err.textContent = d.error || 'Login failed'; err.style.display = 'block'; document.getElementById('btn-login').textContent = 'SIGN IN →'; return; }
+      window.location.href = '/';
+    } catch(e) { err.textContent = 'Connection error. Try again.'; err.style.display = 'block'; document.getElementById('btn-login').textContent = 'SIGN IN →'; }
+  }
+  document.getElementById('btn-login').addEventListener('click', login);
+  document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+  document.getElementById('username').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('password').focus(); });
+</script>
+</body>
+</html>
