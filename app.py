@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
-app = Flask(__name__, template_folder="templates", static_folder="static")
+app = Flask(__name__)
 
 # ─── CONFIG ─────────────────────────────────────────────────
 app.secret_key = os.environ.get("SECRET_KEY", "zmoto-change-this-in-production-xyz987")
@@ -241,6 +241,8 @@ def delete_user(uid):
     if uid == session.get("user_id"):
         return jsonify({"error": "Cannot delete your own account"}), 400
     with get_db() as c:
+        c.execute("UPDATE sales SET user_id = NULL WHERE user_id=?", (uid,))
+        c.execute("UPDATE purchases SET user_id = NULL WHERE user_id=?", (uid,))
         c.execute("DELETE FROM users WHERE id=?", (uid,))
     return jsonify({"ok": True})
 
