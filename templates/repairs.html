@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% set active = "repairs" %}
+{% block title %}Repairs{% endblock %}
+{% block page_title %}🔧 Repairs{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <input class="form-control form-control-sm" id="rep-search" placeholder="🔍 Search…" style="max-width:200px">
+    <select class="form-select form-select-sm" id="rep-status" style="max-width:160px">
+      <option value="">All Statuses</option>
+      <option value="pending">Pending</option>
+      <option value="in_progress">In Progress</option>
+      <option value="waiting_parts">Waiting Parts</option>
+      <option value="done">Done</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-danger btn-sm" id="btn-add">＋ New Repair</button>
+    <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
+    <button class="btn btn-outline-danger btn-sm" id="btn-delete">🗑 Delete</button>
+  </div>
+</div>
+
+<div class="zmoto-card table-responsive">
+  <table class="table table-hover mb-0">
+    <thead><tr><th>#</th><th>Customer</th><th>Vehicle</th><th>Description</th><th>Status</th><th>Labor</th><th>Parts</th><th>Total</th><th>Tech</th><th>Date</th><th></th></tr></thead>
+    <tbody id="tbl"></tbody>
+  </table>
+</div>
+
+<!-- New/Edit Repair Modal -->
+<div class="modal fade" id="modalRepair" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modal-title">New Repair</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="rid">
+        <div class="row g-2 mb-2">
+          <div class="col-md-6"><label class="form-label">Customer</label><select class="form-select" id="r-customer"><option value="">— Walk-in —</option></select></div>
+          <div class="col-md-6"><label class="form-label">Vehicle *</label><input class="form-control" id="r-vehicle" placeholder="Honda CB500 2020"></div>
+        </div>
+        <div class="mb-2"><label class="form-label">Description</label><textarea class="form-control" id="r-desc" rows="2" placeholder="Describe the issue…"></textarea></div>
+        <div class="row g-2 mb-2">
+          <div class="col-md-6"><label class="form-label">Status</label>
+            <select class="form-select" id="r-status">
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="waiting_parts">Waiting Parts</option>
+              <option value="done">Done</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div class="col-md-6"><label class="form-label">Labor Cost (TND)</label><input class="form-control" id="r-labor" type="number" step="0.01" value="0"></div>
+        </div>
+        <div class="mb-2"><label class="form-label">Note</label><input class="form-control" id="r-note"></div>
+
+        <!-- Parts section (only shown when editing) -->
+        <div id="parts-section" class="d-none">
+          <hr>
+          <h6 style="font-family:'Barlow Condensed',sans-serif;font-weight:700">🔩 Parts Used</h6>
+          <div class="row g-2 mb-2">
+            <div class="col-md-5"><input class="form-control form-control-sm" id="part-search" placeholder="Search part…"></div>
+            <div class="col-md-2"><input class="form-control form-control-sm" id="part-qty" type="number" value="1" min="1" placeholder="Qty"></div>
+            <div class="col-md-3"><input class="form-control form-control-sm" id="part-price" type="number" step="0.01" placeholder="Price (auto)"></div>
+            <div class="col-md-2"><button class="btn btn-danger btn-sm w-100" id="btn-add-part">Add</button></div>
+          </div>
+          <div class="prod-search-list mb-2" id="part-list"></div>
+          <div class="zmoto-card table-responsive">
+            <table class="table table-sm mb-0">
+              <thead><tr><th>Ref</th><th>Product</th><th>Qty</th><th>Price</th><th>Sub</th><th></th></tr></thead>
+              <tbody id="parts-tbl"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="btn-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sel = null, allParts = [], selPart = null, editRepairId = null;
+const modal = new bootstrap.Modal('#modalRepair');
+
+function load() {
+  const q = encodeURIComponent($('#rep-search').val());
+  const s = encodeURIComponent($('#rep-status').val());
+  apiG(`/api/repairs?q=${q}&status=${s}`).done(function(rows) {
+    const $t = $('#tbl').empty();
+    if (!rows.length) { $t.append('<tr><td colspan="11" class="text-center text-muted py-4">No repairs found</td></tr>'); return; }
+    rows.forEach(r => {
+      $(`<tr>
+        <td>#${r.id}</td><td>${r.customer_name}</td><td>${r.vehicle||'—'}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description||'—'}</td>
+        <td><span class="badge status-${r.status}">${r.status.replace(/_/g,' ')}</span></td>
+        <td>${fmt(r.labor_cost)}</td><td>${fmt(r.parts_cost)}</td>
+        <td><b>${fmt(r.total)}</b> TND</td>
+        <td>${r.technician}</td>
+        <td>${(r.created_at||'').slice(0,10)}</td>
+        <td><button class="btn btn-outline-secondary btn-sm" data-id="${r.id}">🔩 Parts</button></td>
+      </tr>`).on('click', function(e) {
+        if ($(e.target).is('button')) return;
+        $('#tbl tr').removeClass('table-active'); $(this).addClass('table-active'); sel=r;
+      }).find('button').on('click', function() {
+        openEdit(parseInt($(this).data('id')));
+      }).end().appendTo($t);
+    });
+  });
+}
+
+function loadCustomersIntoSelect() {
+  return apiG('/api/customers').done(function(custs) {
+    const $s = $('#r-customer').empty().append('<option value="">— Walk-in —</option>');
+    custs.forEach(c => $s.append(`<option value="${c.id}">${c.name}</option>`));
+  });
+}
+
+function openAdd() {
+  editRepairId = null;
+  $('#modal-title').text('New Repair');
+  $('#rid').val(''); $('#r-vehicle').val(''); $('#r-desc').val('');
+  $('#r-status').val('pending'); $('#r-labor').val(0); $('#r-note').val('');
+  $('#parts-section').addClass('d-none');
+  loadCustomersIntoSelect().done(() => modal.show());
+}
+
+function openEdit(id) {
+  editRepairId = id;
+  apiG(`/api/repairs/${id}`).done(function(data) {
+    const r = data.repair;
+    $('#modal-title').text('Edit Repair #'+id);
+    $('#rid').val(r.id); $('#r-vehicle').val(r.vehicle); $('#r-desc').val(r.description);
+    $('#r-status').val(r.status); $('#r-labor').val(r.labor_cost); $('#r-note').val(r.note);
+    $('#parts-section').removeClass('d-none');
+    loadCustomersIntoSelect().done(() => { $('#r-customer').val(r.customer_id||''); });
+    renderPartsTable(data.parts);
+    modal.show();
+  });
+}
+
+function renderPartsTable(parts) {
+  const $t = $('#parts-tbl').empty();
+  if (!parts.length) { $t.append('<tr><td colspan="6" class="text-center text-muted py-2">No parts added</td></tr>'); return; }
+  parts.forEach(p => {
+    $(`<tr>
+      <td>${p.ref}</td><td>${p.product_name}</td><td>${p.qty}</td>
+      <td>${fmt(p.unit_price)}</td><td>${fmt(p.qty*p.unit_price)}</td>
+      <td><button class="btn btn-outline-danger btn-sm" data-partid="${p.id}">×</button></td>
+    </tr>`).find('button').on('click', function() {
+      apiD(`/api/repairs/${editRepairId}/parts/${$(this).data('partid')}`)
+        .done(() => { toast('Part removed'); apiG(`/api/repairs/${editRepairId}`).done(d => renderPartsTable(d.parts)); });
+    }).end().appendTo($t);
+  });
+}
+
+// Part search
+$('#part-search').on('input', function() {
+  const q = $(this).val().toLowerCase();
+  const $l = $('#part-list').empty();
+  if (!q) return;
+  apiG('/api/products?q='+encodeURIComponent(q)).done(function(rows) {
+    rows.slice(0,8).forEach(p => {
+      $(`<div class="psl-item ${p.qty<=0?'out':''}">
+        <span><b>${p.ref}</b> ${p.name}</span>
+        <span class="text-muted">${fmt(p.sell_price)} TND ×${p.qty}</span>
+      </div>`).on('click', function() {
+        selPart = p;
+        $('#part-search').val(p.ref+' — '+p.name);
+        $('#part-price').val(p.sell_price);
+        $l.empty();
+      }).appendTo($l);
+    });
+  });
+});
+
+$('#btn-add-part').on('click', function() {
+  if (!selPart) { toast('Select a part first','error'); return; }
+  if (!editRepairId) { toast('Save the repair first','error'); return; }
+  const qty   = parseInt($('#part-qty').val())||1;
+  const price = parseFloat($('#part-price').val())||selPart.sell_price;
+  apiP(`/api/repairs/${editRepairId}/parts`, {product_id:selPart.id, qty, unit_price:price})
+    .done(() => {
+      selPart=null; $('#part-search').val(''); $('#part-qty').val(1); $('#part-price').val('');
+      toast('Part added');
+      apiG(`/api/repairs/${editRepairId}`).done(d => renderPartsTable(d.parts));
+    }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+
+$('#btn-save').on('click', function() {
+  const id   = $('#rid').val();
+  const body = { customer_id:$('#r-customer').val()||null, vehicle:$('#r-vehicle').val().trim(), description:$('#r-desc').val().trim(), status:$('#r-status').val(), labor_cost:parseFloat($('#r-labor').val())||0, note:$('#r-note').val() };
+  if (!body.vehicle) { toast('Vehicle is required','error'); return; }
+  if (id) {
+    apiU('/api/repairs/'+id, body).done(() => { modal.hide(); toast('Repair updated!'); load(); });
+  } else {
+    apiP('/api/repairs', body).done(res => {
+      editRepairId = res.id; $('#rid').val(res.id);
+      $('#modal-title').text('Edit Repair #'+res.id);
+      $('#parts-section').removeClass('d-none');
+      toast('Repair created! Now add parts.');
+      load();
+    }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+  }
+});
+
+$('#btn-add').on('click', openAdd);
+$('#btn-edit').on('click', () => { if (!sel) { toast('Select a repair','error'); return; } openEdit(sel.id); });
+$('#btn-delete').on('click', function() {
+  if (!sel) { toast('Select a repair','error'); return; }
+  if (!confirm('Delete repair #'+sel.id+'? Parts will be returned to stock.')) return;
+  apiD('/api/repairs/'+sel.id).done(() => { sel=null; toast('Deleted'); load(); });
+});
+$('#rep-search, #rep-status').on('input change', load);
+
+load();
+</script>
+{% endblock %}

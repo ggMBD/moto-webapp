@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% set active = "dashboard" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-4" id="stat-cards">
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="s-products">—</div><div class="stat-label">📦 Products</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="s-customers">—</div><div class="stat-label">👤 Customers</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#3742fa"><div class="stat-val" id="s-suppliers">—</div><div class="stat-label">🏭 Suppliers</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-today">—</div><div class="stat-label">💰 Today (TND)</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="s-repairs">—</div><div class="stat-label">🔧 Open Repairs</div></div></div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">⚠ Low Stock Alert</h6>
+    <div class="zmoto-card table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Ref</th><th>Name</th><th>Qty</th><th>Min</th><th>Status</th></tr></thead>
+        <tbody id="tbl-lowstock"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🕐 Recent Sales</h6>
+    <div class="zmoto-card table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>#</th><th>Customer</th><th>Total</th><th>Seller</th><th>Date</th></tr></thead>
+        <tbody id="tbl-sales"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-12">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🔧 Recent Repairs</h6>
+    <div class="zmoto-card table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>#</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Total</th><th>Date</th></tr></thead>
+        <tbody id="tbl-repairs"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+apiG('/api/dashboard').done(function(d) {
+  $('#s-products').text(d.products);
+  $('#s-customers').text(d.customers);
+  $('#s-suppliers').text(d.suppliers);
+  $('#s-today').text(fmt(d.sales_today));
+  $('#s-repairs').text(d.repairs_open);
+
+  const $ls = $('#tbl-lowstock').empty();
+  d.low_stock.length
+    ? d.low_stock.forEach(r => $ls.append(`<tr><td><b>${r.ref}</b></td><td>${r.name}</td><td>${r.qty}</td><td>${r.min_stock}</td><td><span class="badge status-waiting_parts">Low</span></td></tr>`))
+    : $ls.append('<tr><td colspan="5" class="text-center text-muted py-3">✅ All stock OK</td></tr>');
+
+  const $rs = $('#tbl-sales').empty();
+  d.recent_sales.length
+    ? d.recent_sales.forEach(r => $rs.append(`<tr><td>#${r.id}</td><td>${r.customer}</td><td>${fmt(r.total)} TND</td><td>${r.seller}</td><td>${(r.created_at||'').slice(0,10)}</td></tr>`))
+    : $rs.append('<tr><td colspan="5" class="text-center text-muted py-3">No sales yet</td></tr>');
+
+  const $rr = $('#tbl-repairs').empty();
+  d.recent_repairs.length
+    ? d.recent_repairs.forEach(r => $rr.append(`<tr><td>#${r.id}</td><td>${r.customer}</td><td>${r.vehicle||'—'}</td><td><span class="badge status-${r.status}">${r.status.replace('_',' ')}</span></td><td>${fmt(r.total)} TND</td><td>${(r.created_at||'').slice(0,10)}</td></tr>`))
+    : $rr.append('<tr><td colspan="6" class="text-center text-muted py-3">No repairs yet</td></tr>');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set active = "purchases" %}
+{% block title %}Purchases{% endblock %}
+{% block page_title %}🛒 Purchases{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="fw-bold" style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem">Purchases / Restocking</span>
+  <button class="btn btn-danger btn-sm" id="btn-add">＋ Add Purchase</button>
+</div>
+<div class="zmoto-card table-responsive">
+  <table class="table table-hover mb-0">
+    <thead><tr><th>#</th><th>Supplier</th><th>Product</th><th>Ref</th><th>Qty</th><th>Unit</th><th>Total</th><th>By</th><th>Note</th><th>Date</th></tr></thead>
+    <tbody id="tbl"></tbody>
+  </table>
+</div>
+<div class="modal fade" id="modalPur" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Add Purchase</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="mb-2"><label class="form-label">Supplier</label><select class="form-select" id="pur-sup"><option value="">— None —</option></select></div>
+      <div class="mb-2"><label class="form-label">Product *</label><select class="form-select" id="pur-prod"></select></div>
+      <div class="row g-2 mb-2">
+        <div class="col-6"><label class="form-label">Qty *</label><input class="form-control" id="pur-qty" type="number" min="1" value="1"></div>
+        <div class="col-6"><label class="form-label">Unit Price (TND)</label><input class="form-control" id="pur-price" type="number" step="0.01" value="0"></div>
+      </div>
+      <div class="mb-2"><label class="form-label">Note</label><input class="form-control" id="pur-note"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger btn-sm" id="btn-save">Save</button></div>
+  </div></div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const modal = new bootstrap.Modal('#modalPur');
+function load() {
+  apiG('/api/purchases').done(rows => {
+    const $t=$('#tbl').empty();
+    rows.length ? rows.forEach(r=>$t.append(`<tr><td>${r.id}</td><td>${r.supplier}</td><td>${r.product}</td><td>${r.ref}</td><td>${r.qty}</td><td>${fmt(r.unit_price)}</td><td>${fmt(r.total)}</td><td>${r.buyer}</td><td>${r.note||'—'}</td><td>${(r.created_at||'').slice(0,10)}</td></tr>`))
+              : $t.append('<tr><td colspan="10" class="text-center text-muted py-4">No purchases yet</td></tr>');
+  });
+}
+$('#btn-add').on('click',()=>{
+  $.when(apiG('/api/suppliers'),apiG('/api/products')).done(function(sr,pr){
+    const $s=$('#pur-sup').empty().append('<option value="">— None —</option>');
+    sr[0].forEach(s=>$s.append(`<option value="${s.id}">${s.name}</option>`));
+    const $p=$('#pur-prod').empty();
+    pr[0].forEach(p=>$p.append(`<option value="${p.id}">${p.ref} — ${p.name}</option>`));
+    $('#pur-qty').val(1);$('#pur-price').val(0);$('#pur-note').val('');
+    modal.show();
+  });
+});
+$('#btn-save').on('click',()=>{
+  const body={supplier_id:$('#pur-sup').val()||null,product_id:parseInt($('#pur-prod').val()),qty:parseInt($('#pur-qty').val()),unit_price:parseFloat($('#pur-price').val())||0,note:$('#pur-note').val()};
+  if(!body.product_id||!body.qty){toast('Product and Qty required','error');return;}
+  apiP('/api/purchases',body).done(()=>{modal.hide();toast('Purchase saved! Stock updated.');load();});
+});
+load();
+</script>
+{% endblock %}

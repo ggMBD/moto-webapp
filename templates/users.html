@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% set active = "users" %}
+{% block title %}Users{% endblock %}
+{% block page_title %}🔑 User Management{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <span class="text-muted small">Manage who can access Z-MOTO Manager</span>
+  <div class="d-flex gap-2">
+    <button class="btn btn-danger btn-sm" id="btn-add">＋ Add User</button>
+    <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
+    <button class="btn btn-outline-danger btn-sm" id="btn-del">🗑 Delete</button>
+  </div>
+</div>
+<div class="zmoto-card table-responsive">
+  <table class="table table-hover mb-0">
+    <thead><tr><th>ID</th><th>Username</th><th>Full Name</th><th>Role</th><th>Created</th></tr></thead>
+    <tbody id="tbl"></tbody>
+  </table>
+</div>
+<div class="modal fade" id="modalU" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title" id="mtitle">Add User</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="uid">
+      <div class="row g-2 mb-2">
+        <div class="col-6"><label class="form-label">Username *</label><input class="form-control" id="u-username" autocomplete="off"></div>
+        <div class="col-6"><label class="form-label">Full Name</label><input class="form-control" id="u-fullname"></div>
+      </div>
+      <div class="row g-2 mb-2">
+        <div class="col-6">
+          <label class="form-label">Password <small id="pw-hint" class="text-muted" style="text-transform:none;font-weight:400">(blank = keep)</small></label>
+          <input class="form-control" id="u-password" type="password" autocomplete="new-password">
+        </div>
+        <div class="col-6"><label class="form-label">Role</label>
+          <select class="form-select" id="u-role"><option value="staff">Staff</option><option value="admin">Admin</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger btn-sm" id="btn-save">Save</button></div>
+  </div></div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let sel=null;
+const modal=new bootstrap.Modal('#modalU');
+function load(){
+  apiG('/api/users').done(rows=>{
+    const $t=$('#tbl').empty(); sel=null;
+    rows.length ? rows.forEach(r=>{
+      $(`<tr><td>${r.id}</td><td><b>${r.username}</b></td><td>${r.full_name||'—'}</td>
+         <td><span class="badge ${r.role==='admin'?'status-in_progress':'status-done'}">${r.role}</span></td>
+         <td>${(r.created_at||'').slice(0,10)}</td></tr>`)
+        .on('click',function(){$('#tbl tr').removeClass('table-active');$(this).addClass('table-active');sel=r;}).appendTo($t);
+    }) : $t.append('<tr><td colspan="5" class="text-center text-muted py-4">No users</td></tr>');
+  });
+}
+function openModal(d){
+  $('#mtitle').text(d?'Edit User':'Add User'); $('#uid').val(d?.id||'');
+  $('#u-username').val(d?.username||'').prop('disabled',!!d);
+  $('#u-fullname').val(d?.full_name||''); $('#u-password').val('');
+  $('#u-role').val(d?.role||'staff'); $('#pw-hint').toggle(!!d);
+  modal.show();
+}
+$('#btn-add').on('click',()=>openModal(null));
+$('#btn-edit').on('click',()=>{if(!sel){toast('Select a user','error');return;}openModal(sel);});
+$('#btn-save').on('click',()=>{
+  const id=$('#uid').val(), body={username:$('#u-username').val().trim(),full_name:$('#u-fullname').val().trim(),role:$('#u-role').val(),password:$('#u-password').val()};
+  if(!id&&!body.password){toast('Password required for new users','error');return;}
+  if(!id&&!body.username){toast('Username required','error');return;}
+  (id?apiU('/api/users/'+id,body):apiP('/api/users',body))
+    .done(()=>{modal.hide();toast(id?'Updated!':'User created!');load();})
+    .fail(r=>toast(r.responseJSON?.error||'Error','error'));
+});
+$('#btn-del').on('click',()=>{
+  if(!sel){toast('Select a user','error');return;}
+  if(!confirm('Delete user "'+sel.username+'"?'))return;
+  apiD('/api/users/'+sel.id).done(()=>{sel=null;toast('Deleted');load();}).fail(r=>toast(r.responseJSON?.error||'Error','error'));
+});
+load();
+</script>
+{% endblock %}

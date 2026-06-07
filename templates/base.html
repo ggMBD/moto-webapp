@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>{% block title %}Z-MOTO{% endblock %} — Z-MOTO Manager</title>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Bootstrap 5.3 -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Z-MOTO Custom CSS (single file) -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<div id="app">
+
+  <!-- SIDEBAR OVERLAY (mobile) -->
+  <div id="sidebar-overlay"></div>
+
+  <!-- ══ SIDEBAR ══ -->
+  <div id="sidebar">
+    <div class="logo-wrap">
+      <div style="font-size:2rem">🏍</div>
+      <div class="logo-name">Z-MOTO</div>
+      <div class="logo-sub">Manager</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard"  class="nav-link-item {% if active=='dashboard'  %}active{% endif %}"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="/inventory"  class="nav-link-item {% if active=='inventory'  %}active{% endif %}"><span class="nav-icon">📦</span> Inventory</a>
+      <a href="/sales"      class="nav-link-item {% if active=='sales'      %}active{% endif %}"><span class="nav-icon">💰</span> Sales</a>
+      <a href="/repairs"    class="nav-link-item {% if active=='repairs'    %}active{% endif %}"><span class="nav-icon">🔧</span> Repairs</a>
+      <a href="/purchases"  class="nav-link-item {% if active=='purchases'  %}active{% endif %}"><span class="nav-icon">🛒</span> Purchases</a>
+      <a href="/customers"  class="nav-link-item {% if active=='customers'  %}active{% endif %}"><span class="nav-icon">👤</span> Customers</a>
+      <a href="/suppliers"  class="nav-link-item {% if active=='suppliers'  %}active{% endif %}"><span class="nav-icon">🏭</span> Suppliers</a>
+      <a href="/reports"    class="nav-link-item {% if active=='reports'    %}active{% endif %}"><span class="nav-icon">📊</span> Reports</a>
+      <span class="nav-link-item admin-nav" id="nav-users" style="display:none">
+        <a href="/users"    class="nav-link-item {% if active=='users'      %}active{% endif %}" style="padding:0;border:none;background:none"><span class="nav-icon">🔑</span> Users</a>
+      </span>
+    </nav>
+    <div class="sidebar-footer">v4.0 — Z-MOTO</div>
+  </div>
+
+  <!-- ══ MAIN ══ -->
+  <div id="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="d-flex align-items-center gap-2">
+        <button class="hamburger" id="hamburger">☰</button>
+        <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="topbar-date d-none d-md-block" id="topbar-date"></div>
+        <button class="theme-btn" id="theme-btn">☀️ Light</button>
+        <div class="user-pill" id="user-pill">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <span class="user-name" id="user-name">…</span>
+          <span class="role-badge" id="role-badge">—</span>
+          <div class="user-dropdown" id="user-dropdown">
+            <div class="dd-item" id="dd-change-pw">🔐 Change Password</div>
+            <div class="dd-sep"></div>
+            <div class="dd-item danger" id="dd-logout">🚪 Sign Out</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE BODY -->
+    <div class="page-body">
+      {% block content %}{% endblock %}
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="modalChangePw" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">🔐 Change Password</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">New Password</label><input class="form-control" id="new-pw" type="password"></div>
+        <div class="mb-3"><label class="form-label">Confirm</label><input class="form-control" id="confirm-pw" type="password"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="btn-save-pw">Update</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script>
+// ── GLOBAL HELPERS ──────────────────────────────────────────
+const fmt  = n => parseFloat(n||0).toFixed(2);
+const apiG = url     => $.getJSON(url);
+const apiP = (url,d) => $.ajax({url, method:'POST',   contentType:'application/json', data:JSON.stringify(d)});
+const apiU = (url,d) => $.ajax({url, method:'PUT',    contentType:'application/json', data:JSON.stringify(d)});
+const apiD = url     => $.ajax({url, method:'DELETE'});
+
+let _toastTimer = null;
+function toast(msg, type='success') {
+  if (_toastTimer) clearTimeout(_toastTimer);
+  const $c = $('#toast-container');
+  $c.find('.zmoto-toast').removeClass('show');
+  const $t = $(`<div class="zmoto-toast ${type}">${type==='success'?'✅':'❌'} ${msg}</div>`).appendTo($c);
+  setTimeout(() => $t.addClass('show'), 10);
+  _toastTimer = setTimeout(() => { $t.removeClass('show'); setTimeout(() => $t.remove(), 400); }, 3500);
+}
+
+// ── THEME ───────────────────────────────────────────────────
+const savedTheme = localStorage.getItem('zmoto-theme') || 'dark';
+applyTheme(savedTheme);
+function applyTheme(t) {
+  $('html').attr('data-theme', t);
+  $('#theme-btn').text(t==='dark' ? '☀️ Light' : '🌙 Dark');
+  localStorage.setItem('zmoto-theme', t);
+}
+$('#theme-btn').on('click', () => applyTheme($('html').attr('data-theme')==='dark' ? 'light' : 'dark'));
+
+// ── MOBILE SIDEBAR ──────────────────────────────────────────
+$('#hamburger').on('click', () => { $('#sidebar').addClass('open'); $('#sidebar-overlay').addClass('open'); });
+$('#sidebar-overlay').on('click', () => { $('#sidebar').removeClass('open'); $('#sidebar-overlay').removeClass('open'); });
+
+// ── TOPBAR DATE ─────────────────────────────────────────────
+$('#topbar-date').text(new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+
+// ── USER SESSION ────────────────────────────────────────────
+let currentUser = null;
+apiG('/api/auth/me').done(function(me) {
+  if (!me.logged_in) { window.location.href = '/login'; return; }
+  currentUser = me;
+  $('#user-avatar').text((me.full_name||me.username).slice(0,2).toUpperCase());
+  $('#user-name').text(me.full_name||me.username);
+  $('#role-badge').text(me.role);
+  if (me.role === 'admin') {
+    $('.admin-nav, #nav-users').show();
+  }
+});
+
+$('#user-pill').on('click', e => { e.stopPropagation(); $('#user-dropdown').toggleClass('open'); });
+$(document).on('click', () => $('#user-dropdown').removeClass('open'));
+$('#dd-logout').on('click', () => apiP('/api/auth/logout',{}).done(() => window.location.href='/login'));
+$('#dd-change-pw').on('click', () => {
+  $('#user-dropdown').removeClass('open');
+  $('#new-pw,#confirm-pw').val('');
+  new bootstrap.Modal('#modalChangePw').show();
+});
+$('#btn-save-pw').on('click', function() {
+  const np=$('#new-pw').val(), cp=$('#confirm-pw').val();
+  if (!np) { toast('Enter a new password','error'); return; }
+  if (np!==cp) { toast('Passwords do not match','error'); return; }
+  apiU('/api/auth/password/'+currentUser.user_id,{new_password:np})
+    .done(() => { bootstrap.Modal.getInstance('#modalChangePw')?.hide(); toast('Password updated!'); });
+});
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

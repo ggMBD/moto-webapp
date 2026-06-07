@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% set active = "reports" %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}📊 Reports{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#3742fa"><div class="stat-val" id="r-sales">—</div><div class="stat-label">Total Sales</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="r-rev">—</div><div class="stat-label">Revenue (TND)</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="r-stock">—</div><div class="stat-label">Stock Value</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="r-low">—</div><div class="stat-label">Low Stock</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#3742fa"><div class="stat-val" id="r-repairs">—</div><div class="stat-label">Total Repairs</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="r-rep-rev">—</div><div class="stat-label">Repair Revenue</div></div></div>
+</div>
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">🏆 Top Products</h6>
+    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Product</th><th>Sold</th><th>Revenue</th></tr></thead><tbody id="r-top"></tbody></table></div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">👤 By Customer</h6>
+    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Customer</th><th>Sales</th><th>Spent</th></tr></thead><tbody id="r-cust"></tbody></table></div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">📅 Monthly Revenue</h6>
+    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Month</th><th>Sales</th><th>Revenue</th></tr></thead><tbody id="r-month"></tbody></table></div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">🧑‍💼 By Staff</h6>
+    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Seller</th><th>Sales</th><th>Revenue</th></tr></thead><tbody id="r-staff"></tbody></table></div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">🔧 Repairs by Status</h6>
+    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Status</th><th>Count</th><th>Revenue</th></tr></thead><tbody id="r-rep-status"></tbody></table></div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">📦 Stock Value</h6>
+    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Ref</th><th>Name</th><th>Qty</th><th>Value</th></tr></thead><tbody id="r-stock-tbl"></tbody></table></div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function fill(id, rows, fn, cols) {
+  const $t=$(id).empty();
+  rows.length ? rows.forEach(r=>$t.append(fn(r))) : $t.append(`<tr><td colspan="${cols}" class="text-center text-muted py-3">No data</td></tr>`);
+}
+apiG('/api/reports').done(function(d) {
+  const o=d.overview;
+  $('#r-sales').text(o.total_sales); $('#r-rev').text(fmt(o.total_revenue));
+  $('#r-stock').text(fmt(o.total_stock_value)); $('#r-low').text(o.low_stock_count);
+  $('#r-repairs').text(o.total_repairs); $('#r-rep-rev').text(fmt(o.repairs_revenue));
+  fill('#r-top',    d.top_products,      r=>`<tr><td>${r.name}</td><td>${r.total_sold}</td><td>${fmt(r.revenue)} TND</td></tr>`, 3);
+  fill('#r-cust',   d.sales_by_customer, r=>`<tr><td>${r.customer}</td><td>${r.nb_sales}</td><td>${fmt(r.total_spent)} TND</td></tr>`, 3);
+  fill('#r-month',  d.monthly_sales,     r=>`<tr><td>${r.month}</td><td>${r.nb}</td><td>${fmt(r.revenue)} TND</td></tr>`, 3);
+  fill('#r-staff',  d.sales_by_user,     r=>`<tr><td>${r.seller}</td><td>${r.nb_sales}</td><td>${fmt(r.total_revenue)} TND</td></tr>`, 3);
+  fill('#r-rep-status', d.repairs_by_status, r=>`<tr><td><span class="badge status-${r.status}">${r.status.replace(/_/g,' ')}</span></td><td>${r.nb}</td><td>${fmt(r.revenue||0)} TND</td></tr>`, 3);
+  fill('#r-stock-tbl',  d.stock_value,   r=>`<tr><td>${r.ref}</td><td>${r.name}</td><td>${r.qty}</td><td>${fmt(r.stock_value)} TND</td></tr>`, 4);
+});
+</script>
+{% endblock %}
