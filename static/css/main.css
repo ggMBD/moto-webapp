@@ -2,7 +2,46 @@
    Z-MOTO Manager v4 — main.css
    Custom styles layered on Bootstrap 5.3
 ═══════════════════════════════════════════════ */
+/* ── FORCE DARK MODE TEXT ── */
+[data-theme="dark"] {
+  --bs-body-color: #e8eaf0;
+  --bs-body-bg: #0d0f14;
+  --bs-table-color: #e8eaf0;
+  --bs-table-striped-color: #e8eaf0;
+  --bs-table-hover-color: #e8eaf0;
+  --bs-table-bg: transparent;
+  color-scheme: dark;
+}
 
+[data-theme="dark"] body,
+[data-theme="dark"] td,
+[data-theme="dark"] th,
+[data-theme="dark"] p,
+[data-theme="dark"] span,
+[data-theme="dark"] div,
+[data-theme="dark"] a,
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] option,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .modal-content {
+  color: #e8eaf0 !important;
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+  background-color: #0d0f14 !important;
+  border-color: #252a3a !important;
+}
+
+[data-theme="dark"] option {
+  background-color: #1a1f2e !important;
+}
 /* ── THEME VARIABLES ── */
 :root[data-theme="dark"] {
   --bg:        #0d0f14;
@@ -179,12 +218,36 @@ body {
 .table td, .table th { padding: 9px 13px; font-size: .84rem; vertical-align: middle; }
 
 .table-responsive { border-radius: 10px; overflow: hidden; }
-
-/* Form controls dark/light */
-.form-control, .form-select {
-  background: var(--input-bg); border-color: var(--border);
-  color: var(--text); font-size: .875rem;
+/* Fix all text in dark mode */
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .table,
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select,
+[data-theme="dark"] select option {
+  color: var(--text) !important;
+  background-color: var(--input-bg);
 }
+
+[data-theme="dark"] select option {
+  background-color: #1a1f2e;
+  color: #e8eaf0;
+}
+/* Form controls dark/light */
+.form-control, .form-select,
+.form-control:disabled,
+.form-select:disabled {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  font-size: .875rem;
+}
+.form-control:focus, .form-select:focus {
+  background-color: var(--input-bg) !important;
+  color: var(--text) !important;
+  border-color: #ff4757 !important;
+  box-shadow: 0 0 0 .2rem rgba(255,71,87,.15) !important;
+}
+
 .form-control:focus, .form-select:focus {
   background: var(--input-bg); color: var(--text);
   border-color: #ff4757; box-shadow: 0 0 0 .2rem rgba(255,71,87,.15);
