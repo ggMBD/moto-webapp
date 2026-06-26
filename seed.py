@@ -180,6 +180,14 @@ def rand_date(days_back=365):
                       minutes=random.randint(0, 59))
     return (base + delta).strftime("%Y-%m-%d %H:%M:%S")
 
+def random_cin(used_cins):
+    """Tunisian CIN: 8 digits, unique."""
+    while True:
+        cin = str(random.randint(10000000, 19999999))
+        if cin not in used_cins:
+            used_cins.add(cin)
+            return cin
+
 def build():
     if os.path.exists(DB_FILE):
         os.remove(DB_FILE)
@@ -214,10 +222,10 @@ def build():
         CREATE TABLE customers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
+            cin TEXT DEFAULT '',
             phone TEXT DEFAULT '',
             email TEXT DEFAULT '',
             address TEXT DEFAULT '',
-            notes TEXT DEFAULT '',
             ts REAL DEFAULT 0,
             created_at TEXT DEFAULT (date('now'))
         );
@@ -319,17 +327,15 @@ def build():
     print(f"  📦  {len(PARTS)} products seeded")
 
     # ── Customers ────────────────────────────────────────────
-    customers = []
+    used_cins = set()
     for i in range(60):
         name    = random_name()
+        cin     = random_cin(used_cins)
         phone   = random_phone()
-        city    = random.choice(CITIES)
         email   = f"{name.split()[0].lower()}{random.randint(10,99)}@gmail.com"
         address = random_address()
-        note    = random.choice(["Client régulier", "Nouveau client", "Gros acheteur",
-                                 "Mécano amateur", "", "", "", ""])
-        conn.execute("INSERT INTO customers (name,phone,email,address,notes) VALUES (?,?,?,?,?)",
-                     (name, phone, email, address, note))
+        conn.execute("INSERT INTO customers (name,cin,phone,email,address) VALUES (?,?,?,?,?)",
+                     (name, cin, phone, email, address))
     conn.commit()
     cust_ids = [r[0] for r in conn.execute("SELECT id FROM customers").fetchall()]
     print(f"  👤  {len(cust_ids)} customers seeded")
