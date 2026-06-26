@@ -53,10 +53,10 @@ def init_db():
             CREATE TABLE IF NOT EXISTS customers (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
                 name       TEXT NOT NULL,
+                cin        TEXT DEFAULT '',
                 phone      TEXT DEFAULT '',
                 email      TEXT DEFAULT '',
                 address    TEXT DEFAULT '',
-                notes      TEXT DEFAULT '',
                 ts         REAL DEFAULT 0,
                 created_at TEXT DEFAULT (date('now'))
             );

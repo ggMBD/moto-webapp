@@ -15,15 +15,17 @@ def get_customers():
     q = f"%{request.args.get('q','')}%"
     with get_db() as c:
         return jsonify(rows(c.execute(
-            "SELECT * FROM customers WHERE name LIKE ? OR phone LIKE ? ORDER BY name",
-            (q,q)).fetchall()))
+            "SELECT * FROM customers WHERE name LIKE ? OR phone LIKE ? OR cin LIKE ? ORDER BY name",
+            (q,q,q)).fetchall()))
 
 @customers_bp.route("/api/customers", methods=["POST"])
 @login_required
 def add_customer():
     d = request.json
+    if not d.get("name") or not d.get("cin"):
+        return jsonify({"error": "Name and CIN are required"}), 400
     with get_db() as c:
-        c.execute("INSERT INTO customers (name,phone,email,address,notes) VALUES (:name,:phone,:email,:address,:notes)", d)
+        c.execute("INSERT INTO customers (name,cin,phone,email,address) VALUES (:name,:cin,:phone,:email,:address)", d)
         cid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
     return jsonify({"id": cid}), 201
 
@@ -31,8 +33,10 @@ def add_customer():
 @login_required
 def update_customer(cid):
     d = request.json; d["id"] = cid
+    if not d.get("name") or not d.get("cin"):
+        return jsonify({"error": "Name and CIN are required"}), 400
     with get_db() as c:
-        c.execute("UPDATE customers SET name=:name,phone=:phone,email=:email,address=:address,notes=:notes WHERE id=:id", d)
+        c.execute("UPDATE customers SET name=:name,cin=:cin,phone=:phone,email=:email,address=:address WHERE id=:id", d)
     return jsonify({"ok": True})
 
 @customers_bp.route("/api/customers/<int:cid>", methods=["DELETE"])
