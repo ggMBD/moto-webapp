@@ -5,7 +5,18 @@
 
 {% block content %}
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <input class="form-control" id="inv-search" placeholder="🔍 Search parts…" style="max-width:280px">
+  <div class="d-flex gap-2 flex-wrap">
+    <input class="form-control" id="inv-search" placeholder="🔍 Search parts…" style="max-width:240px">
+    <select class="form-select" id="inv-sort" style="max-width:200px">
+      <option value="">Sort by…</option>
+      <option value="low_stock">⚠ Low Stock First</option>
+      <option value="sell_asc">💰 Sell Price ↑</option>
+      <option value="sell_desc">💰 Sell Price ↓</option>
+      <option value="qty_asc">📦 Qty ↑</option>
+      <option value="qty_desc">📦 Qty ↓</option>
+      <option value="name_asc">🔤 Name A–Z</option>
+    </select>
+  </div>
   <div class="d-flex gap-2">
     <button class="btn btn-danger btn-sm" id="btn-add"><i>＋</i> Add Part</button>
     <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
@@ -14,7 +25,19 @@
 </div>
 <div class="zmoto-card table-responsive">
   <table class="table table-hover mb-0">
-    <thead><tr><th>Ref</th><th>Name</th><th>Category</th><th>Brand</th><th>Qty</th><th>Buy</th><th>Sell</th><th>Min</th><th>Status</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Ref</th>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Brand</th>
+        <th class="sortable-th" data-sort="qty">Qty</th>
+        <th>Buy</th>
+        <th class="sortable-th" data-sort="sell">Sell</th>
+        <th>Min</th>
+        <th class="sortable-th" data-sort="status">Status</th>
+      </tr>
+    </thead>
     <tbody id="tbl"></tbody>
   </table>
 </div>
@@ -56,22 +79,73 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+.sortable-th { cursor: pointer; user-select: none; }
+.sortable-th:hover { color: #fff !important; }
+.sortable-th .sort-arrow { font-size: .7rem; margin-left: 3px; opacity: .6; }
+</style>
 <script>
 let sel = null;
+let allRows = [];
+let currentSort = '';
+let statusSortDesc = false; // toggles when clicking Status header repeatedly
 const modal = new bootstrap.Modal('#modalProduct');
+
+function applySort(rows, sortKey) {
+  const arr = [...rows];
+  switch (sortKey) {
+    case 'low_stock':
+      // Low stock items first, then by how critical (qty - min_stock ascending)
+      arr.sort((a,b) => {
+        const aLow = a.qty <= a.min_stock, bLow = b.qty <= b.min_stock;
+        if (aLow && !bLow) return -1;
+        if (!aLow && bLow) return 1;
+        return (a.qty - a.min_stock) - (b.qty - b.min_stock);
+      });
+      break;
+    case 'sell_asc':  arr.sort((a,b) => a.sell_price - b.sell_price); break;
+    case 'sell_desc': arr.sort((a,b) => b.sell_price - a.sell_price); break;
+    case 'qty_asc':   arr.sort((a,b) => a.qty - b.qty); break;
+    case 'qty_desc':  arr.sort((a,b) => b.qty - a.qty); break;
+    case 'name_asc':  arr.sort((a,b) => a.name.localeCompare(b.name)); break;
+    case 'status_low_first':
+      arr.sort((a,b) => {
+        const aLow = a.qty <= a.min_stock, bLow = b.qty <= b.min_stock;
+        if (aLow && !bLow) return -1;
+        if (!aLow && bLow) return 1;
+        return 0;
+      });
+      break;
+    case 'status_ok_first':
+      arr.sort((a,b) => {
+        const aLow = a.qty <= a.min_stock, bLow = b.qty <= b.min_stock;
+        if (aLow && !bLow) return 1;
+        if (!aLow && bLow) return -1;
+        return 0;
+      });
+      break;
+    default: break; // no sort, keep original (alphabetical from API)
+  }
+  return arr;
+}
+
+function render(rows) {
+  const $t = $('#tbl').empty();
+  if (!rows.length) { $t.append('<tr><td colspan="9" class="text-center text-muted py-4">No products found</td></tr>'); return; }
+  rows.forEach(r => {
+    const low = r.qty <= r.min_stock;
+    $(`<tr>
+      <td><b>${r.ref}</b></td><td>${r.name}</td><td>${r.category||'—'}</td><td>${r.brand||'—'}</td>
+      <td>${r.qty}</td><td>${fmt(r.buy_price)}</td><td>${fmt(r.sell_price)}</td><td>${r.min_stock}</td>
+      <td><span class="badge ${low?'status-waiting_parts':'status-done'}">${low?'Low':'OK'}</span></td>
+    </tr>`).on('click', function(){ $('#tbl tr').removeClass('table-active'); $(this).addClass('table-active'); sel=r; }).appendTo($t);
+  });
+}
 
 function load() {
   apiG('/api/products?q='+encodeURIComponent($('#inv-search').val())).done(function(rows) {
-    const $t = $('#tbl').empty();
-    if (!rows.length) { $t.append('<tr><td colspan="9" class="text-center text-muted py-4">No products found</td></tr>'); return; }
-    rows.forEach(r => {
-      const low = r.qty <= r.min_stock;
-      $(`<tr>
-        <td><b>${r.ref}</b></td><td>${r.name}</td><td>${r.category||'—'}</td><td>${r.brand||'—'}</td>
-        <td>${r.qty}</td><td>${fmt(r.buy_price)}</td><td>${fmt(r.sell_price)}</td><td>${r.min_stock}</td>
-        <td><span class="badge ${low?'status-waiting_parts':'status-done'}">${low?'Low':'OK'}</span></td>
-      </tr>`).on('click', function(){ $('#tbl tr').removeClass('table-active'); $(this).addClass('table-active'); sel=r; }).appendTo($t);
-    });
+    allRows = rows;
+    render(applySort(allRows, currentSort));
   });
 }
 
@@ -85,6 +159,31 @@ function openModal(d) {
 }
 
 $('#inv-search').on('input', load);
+
+// Dropdown sort
+$('#inv-sort').on('change', function() {
+  currentSort = $(this).val();
+  render(applySort(allRows, currentSort));
+});
+
+// Clickable column headers
+$('.sortable-th').on('click', function() {
+  const key = $(this).data('sort');
+  if (key === 'status') {
+    // Toggle: low stock on top <-> OK on top
+    statusSortDesc = !statusSortDesc;
+    currentSort = statusSortDesc ? 'status_low_first' : 'status_ok_first';
+    $('#inv-sort').val(''); // dropdown no longer reflects exact state
+  } else if (key === 'sell') {
+    currentSort = currentSort === 'sell_asc' ? 'sell_desc' : 'sell_asc';
+    $('#inv-sort').val(currentSort);
+  } else if (key === 'qty') {
+    currentSort = currentSort === 'qty_asc' ? 'qty_desc' : 'qty_asc';
+    $('#inv-sort').val(currentSort);
+  }
+  render(applySort(allRows, currentSort));
+});
+
 $('#btn-add').on('click', () => openModal(null));
 $('#btn-edit').on('click', () => { if (!sel) { toast('Select a product first','error'); return; } openModal(sel); });
 $('#btn-save').on('click', function() {
