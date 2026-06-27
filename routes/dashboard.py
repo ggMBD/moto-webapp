@@ -16,12 +16,9 @@ def api_dashboard():
     today = date.today().isoformat()
     with get_db() as c:
         return jsonify({
-            "products":    c.execute("SELECT COUNT(*) FROM products").fetchone()[0],
-            "customers":   c.execute("SELECT COUNT(*) FROM customers").fetchone()[0],
-            "suppliers":   c.execute("SELECT COUNT(*) FROM suppliers").fetchone()[0],
             "sales_today": c.execute("SELECT COALESCE(SUM(total),0) FROM sales WHERE created_at LIKE ?", (f"{today}%",)).fetchone()[0],
             "repairs_open": c.execute("SELECT COUNT(*) FROM repairs WHERE status != 'done'").fetchone()[0],
-            "low_stock":   rows(c.execute("SELECT ref,name,qty,min_stock FROM products WHERE qty <= min_stock ORDER BY qty").fetchall()),
+            "low_stock":   c.execute("SELECT COUNT(*) FROM products WHERE qty <= min_stock").fetchone()[0],
             "recent_sales": rows(c.execute("""
                 SELECT s.id, COALESCE(cu.name,'Walk-in') as customer,
                        s.total, s.created_at,
