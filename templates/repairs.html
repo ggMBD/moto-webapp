@@ -25,7 +25,7 @@
 
 <div class="zmoto-card table-responsive">
   <table class="table table-hover mb-0">
-    <thead><tr><th>#</th><th>Customer</th><th>Vehicle</th><th>Description</th><th>Status</th><th>Labor</th><th>Parts</th><th>Total</th><th>Tech</th><th>Date</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Customer</th><th>Bike</th><th>Description</th><th>Status</th><th>Labor</th><th>Parts</th><th>Total</th><th>Tech</th><th>Date</th><th></th></tr></thead>
     <tbody id="tbl"></tbody>
   </table>
 </div>
@@ -41,8 +41,17 @@
       <div class="modal-body">
         <input type="hidden" id="rid">
         <div class="row g-2 mb-2">
-          <div class="col-md-6"><label class="form-label">Customer</label><select class="form-select" id="r-customer"><option value="">— Walk-in —</option></select></div>
-          <div class="col-md-6"><label class="form-label">Vehicle *</label><input class="form-control" id="r-vehicle" placeholder="Honda CB500 2020"></div>
+          <div class="col-md-6">
+            <label class="form-label">Customer *</label>
+            <select class="form-select" id="r-customer"><option value="">— Select customer —</option></select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label d-flex justify-content-between">
+              <span>Bike</span>
+              <a href="/bikes" target="_blank" class="text-decoration-none small" style="text-transform:none;font-weight:400">＋ add new bike</a>
+            </label>
+            <select class="form-select" id="r-bike"><option value="">— Select customer first —</option></select>
+          </div>
         </div>
         <div class="mb-2"><label class="form-label">Description</label><textarea class="form-control" id="r-desc" rows="2" placeholder="Describe the issue…"></textarea></div>
         <div class="row g-2 mb-2">
@@ -89,7 +98,7 @@
 
 {% block extra_js %}
 <script>
-let sel = null, allParts = [], selPart = null, editRepairId = null;
+let sel = null, selPart = null, editRepairId = null;
 const modal = new bootstrap.Modal('#modalRepair');
 
 function load() {
@@ -99,8 +108,9 @@ function load() {
     const $t = $('#tbl').empty();
     if (!rows.length) { $t.append('<tr><td colspan="11" class="text-center text-muted py-4">No repairs found</td></tr>'); return; }
     rows.forEach(r => {
+      const bikeLabel = r.bike_brand ? `${r.bike_brand} ${r.bike_model||''} ${r.bike_plate?'('+r.bike_plate+')':''}` : (r.vehicle || '—');
       $(`<tr>
-        <td>#${r.id}</td><td>${r.customer_name}</td><td>${r.vehicle||'—'}</td>
+        <td>#${r.id}</td><td>${r.customer_name}</td><td>${bikeLabel}</td>
         <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description||'—'}</td>
         <td><span class="badge status-${r.status}">${r.status.replace(/_/g,' ')}</span></td>
         <td>${fmt(r.labor_cost)}</td><td>${fmt(r.parts_cost)}</td>
@@ -120,18 +130,41 @@ function load() {
 
 function loadCustomersIntoSelect() {
   return apiG('/api/customers').done(function(custs) {
-    const $s = $('#r-customer').empty().append('<option value="">— Walk-in —</option>');
-    custs.forEach(c => $s.append(`<option value="${c.id}">${c.name}</option>`));
+    const $s = $('#r-customer').empty().append('<option value="">— Select customer —</option>');
+    custs.forEach(c => $s.append(`<option value="${c.id}">${c.name} — ${c.phone||''}</option>`));
   });
 }
+
+function loadBikesForCustomer(customerId, selectedBikeId) {
+  const $b = $('#r-bike').empty();
+  if (!customerId) { $b.append('<option value="">— Select customer first —</option>'); return; }
+  $b.append('<option value="">— No bike / not specified —</option>');
+  apiG('/api/bikes?owner_id='+customerId).done(function(bikes) {
+    if (!bikes.length) {
+      $b.append('<option disabled>No bikes for this customer — add one</option>');
+    }
+    bikes.forEach(bk => {
+      $b.append(`<option value="${bk.id}">${bk.brand} ${bk.model||''} ${bk.plate?'('+bk.plate+')':''}</option>`);
+    });
+    if (selectedBikeId) $b.val(selectedBikeId);
+  });
+}
+
+$('#r-customer').on('change', function() {
+  loadBikesForCustomer($(this).val(), null);
+});
 
 function openAdd() {
   editRepairId = null;
   $('#modal-title').text('New Repair');
-  $('#rid').val(''); $('#r-vehicle').val(''); $('#r-desc').val('');
+  $('#rid').val(''); $('#r-desc').val('');
   $('#r-status').val('pending'); $('#r-labor').val(0); $('#r-note').val('');
   $('#parts-section').addClass('d-none');
-  loadCustomersIntoSelect().done(() => modal.show());
+  loadCustomersIntoSelect().done(() => {
+    $('#r-customer').val('');
+    loadBikesForCustomer(null, null);
+    modal.show();
+  });
 }
 
 function openEdit(id) {
@@ -139,10 +172,13 @@ function openEdit(id) {
   apiG(`/api/repairs/${id}`).done(function(data) {
     const r = data.repair;
     $('#modal-title').text('Edit Repair #'+id);
-    $('#rid').val(r.id); $('#r-vehicle').val(r.vehicle); $('#r-desc').val(r.description);
+    $('#rid').val(r.id); $('#r-desc').val(r.description);
     $('#r-status').val(r.status); $('#r-labor').val(r.labor_cost); $('#r-note').val(r.note);
     $('#parts-section').removeClass('d-none');
-    loadCustomersIntoSelect().done(() => { $('#r-customer').val(r.customer_id||''); });
+    loadCustomersIntoSelect().done(() => {
+      $('#r-customer').val(r.customer_id||'');
+      loadBikesForCustomer(r.customer_id, r.bike_id);
+    });
     renderPartsTable(data.parts);
     modal.show();
   });
@@ -163,7 +199,6 @@ function renderPartsTable(parts) {
   });
 }
 
-// Part search
 $('#part-search').on('input', function() {
   const q = $(this).val().toLowerCase();
   const $l = $('#part-list').empty();
@@ -198,8 +233,15 @@ $('#btn-add-part').on('click', function() {
 
 $('#btn-save').on('click', function() {
   const id   = $('#rid').val();
-  const body = { customer_id:$('#r-customer').val()||null, vehicle:$('#r-vehicle').val().trim(), description:$('#r-desc').val().trim(), status:$('#r-status').val(), labor_cost:parseFloat($('#r-labor').val())||0, note:$('#r-note').val() };
-  if (!body.vehicle) { toast('Vehicle is required','error'); return; }
+  const body = {
+    customer_id: $('#r-customer').val()||null,
+    bike_id: $('#r-bike').val()||null,
+    description: $('#r-desc').val().trim(),
+    status: $('#r-status').val(),
+    labor_cost: parseFloat($('#r-labor').val())||0,
+    note: $('#r-note').val()
+  };
+  if (!body.customer_id) { toast('Customer is required','error'); return; }
   if (id) {
     apiU('/api/repairs/'+id, body).done(() => { modal.hide(); toast('Repair updated!'); load(); });
   } else {
@@ -223,5 +265,10 @@ $('#btn-delete').on('click', function() {
 $('#rep-search, #rep-status').on('input change', load);
 
 load();
+
+// Auto-open Add modal when arriving from dashboard quick action
+if (new URLSearchParams(window.location.search).get('action') === 'add') {
+  setTimeout(() => openAdd(), 150);
+}
 </script>
 {% endblock %}

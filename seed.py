@@ -272,9 +272,25 @@ def build():
             FOREIGN KEY(product_id) REFERENCES products(id),
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
+        CREATE TABLE bikes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_id INTEGER NOT NULL,
+            brand TEXT DEFAULT '',
+            model TEXT DEFAULT '',
+            year INTEGER,
+            plate TEXT DEFAULT '',
+            vin TEXT DEFAULT '',
+            color TEXT DEFAULT '',
+            mileage INTEGER DEFAULT 0,
+            note TEXT DEFAULT '',
+            created_at TEXT DEFAULT (date('now')),
+            updated_at TEXT DEFAULT (date('now')),
+            FOREIGN KEY(owner_id) REFERENCES customers(id)
+        );
         CREATE TABLE repairs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             customer_id INTEGER,
+            bike_id INTEGER,
             user_id INTEGER,
             vehicle TEXT DEFAULT '',
             description TEXT DEFAULT '',
@@ -286,6 +302,7 @@ def build():
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY(customer_id) REFERENCES customers(id),
+            FOREIGN KEY(bike_id) REFERENCES bikes(id),
             FOREIGN KEY(user_id) REFERENCES users(id)
         );
         CREATE TABLE repair_parts (
@@ -339,6 +356,38 @@ def build():
     conn.commit()
     cust_ids = [r[0] for r in conn.execute("SELECT id FROM customers").fetchall()]
     print(f"  👤  {len(cust_ids)} customers seeded")
+
+    # ── Bikes ────────────────────────────────────────────────
+    # Each customer owns 1-2 bikes (a few own none, a few own 2, to mirror real life)
+    used_plates = set()
+    def random_plate():
+        while True:
+            n  = random.randint(1, 299)
+            n2 = random.randint(1000, 9999)
+            plate = f"{n} TUN {n2}"
+            if plate not in used_plates:
+                used_plates.add(plate)
+                return plate
+
+    bike_ids_by_customer = {}
+    for cid in cust_ids:
+        n_bikes = random.choices([0, 1, 1, 1, 2], weights=[10, 50, 20, 10, 10])[0]
+        bike_ids_by_customer[cid] = []
+        for _ in range(n_bikes):
+            brand = random.choice(MOTO_BRANDS)
+            model = random.choice(MOTO_MODELS[brand])
+            year  = random.randint(2014, 2025)
+            plate = random_plate()
+            color = random.choice(["Noir", "Rouge", "Blanc", "Bleu", "Gris", "Vert", "Bordeaux"])
+            mileage = random.randint(500, 60000)
+            conn.execute("""INSERT INTO bikes (owner_id,brand,model,year,plate,color,mileage)
+                            VALUES (?,?,?,?,?,?,?)""",
+                         (cid, brand, model, year, plate, color, mileage))
+            bid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            bike_ids_by_customer[cid].append(bid)
+    conn.commit()
+    n_bikes_total = conn.execute("SELECT COUNT(*) FROM bikes").fetchone()[0]
+    print(f"  🏍  {n_bikes_total} bikes seeded")
 
     # ── Purchases (restock history) ──────────────────────────
     print("  🛒  Seeding purchases…")
@@ -399,9 +448,11 @@ def build():
     # ── Repairs ──────────────────────────────────────────────
     print("  🔧  Seeding repairs…")
     for _ in range(80):
-        cid     = random.choice(cust_ids)
-        vehicle = random_vehicle()
-        job     = random.choice(REPAIR_JOBS)
+        cid          = random.choice(cust_ids)
+        owned_bikes  = bike_ids_by_customer.get(cid, [])
+        bike_id      = random.choice(owned_bikes) if owned_bikes else None
+        vehicle      = "" if bike_id else random_vehicle()  # fallback text only if no real bike
+        job          = random.choice(REPAIR_JOBS)
         desc, labor, part_refs = job
         status  = random.choice(REPAIR_STATUSES)
         dt      = rand_date(365)
@@ -425,9 +476,9 @@ def build():
         total = labor + parts_cost
 
         conn.execute("""INSERT INTO repairs
-                        (customer_id,user_id,vehicle,description,status,labor_cost,parts_cost,total,note,created_at,updated_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                     (cid, 1, vehicle, desc, status, labor, parts_cost, total, note, dt, dt))
+                        (customer_id,bike_id,user_id,vehicle,description,status,labor_cost,parts_cost,total,note,created_at,updated_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                     (cid, bike_id, 1, vehicle, desc, status, labor, parts_cost, total, note, dt, dt))
         rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
         if status == "done":

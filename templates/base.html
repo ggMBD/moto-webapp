@@ -4,14 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>{% block title %}HOUMEM-MOTO-PRO{% endblock %} — Z-MOTO Manager</title>
-<!-- Prevent theme flash — must be first in <head> -->
-<script>
-  (function() {
-    var t = localStorage.getItem('zmoto-theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', t);
-  })();
-</script>
+<title>{% block title %}Z-MOTO{% endblock %} — Z-MOTO Manager</title>
+
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -34,7 +28,7 @@
   <div id="sidebar">
     <div class="logo-wrap">
       <div style="font-size:2rem">🏍</div>
-      <div class="logo-name">HOUMEM MOTO PRO</div>
+      <div class="logo-name">Z-MOTO</div>
       <div class="logo-sub">Manager</div>
     </div>
     <nav class="sidebar-nav">
@@ -44,6 +38,7 @@
       <a href="/repairs"    class="nav-link-item {% if active=='repairs'    %}active{% endif %}"><span class="nav-icon">🔧</span> Repairs</a>
       <a href="/purchases"  class="nav-link-item {% if active=='purchases'  %}active{% endif %}"><span class="nav-icon">🛒</span> Purchases</a>
       <a href="/customers"  class="nav-link-item {% if active=='customers'  %}active{% endif %}"><span class="nav-icon">👤</span> Customers</a>
+      <a href="/bikes"      class="nav-link-item {% if active=='bikes'      %}active{% endif %}"><span class="nav-icon">🏍</span> Bikes</a>
       <a href="/suppliers"  class="nav-link-item {% if active=='suppliers'  %}active{% endif %}"><span class="nav-icon">🏭</span> Suppliers</a>
       <a href="/reports"    class="nav-link-item {% if active=='reports'    %}active{% endif %}"><span class="nav-icon">📊</span> Reports</a>
       <span class="nav-link-item admin-nav" id="nav-users" style="display:none">

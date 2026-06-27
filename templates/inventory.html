@@ -201,5 +201,10 @@ $('#btn-delete').on('click', function() {
 });
 
 load();
+
+// Auto-open Add modal when arriving from dashboard quick action
+if (new URLSearchParams(window.location.search).get('action') === 'add') {
+  setTimeout(() => openModal(null), 150);
+}
 </script>
 {% endblock %}

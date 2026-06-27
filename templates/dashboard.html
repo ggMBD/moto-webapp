@@ -4,21 +4,80 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row g-3 mb-4" id="stat-cards">
+<!-- TOP STATS -->
+<div class="row g-3 mb-4">
   <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="s-today">—</div><div class="stat-label">💰 Today (TND)</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="s-repairs">—</div><div class="stat-label">🔧Repairs</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-lowstock">—</div><div class="stat-label">Low Stock</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-invoices">—</div><div class="stat-label">pending invoices</div></div></div>
-</div>
-<div class="row g-3 mb-4" id="stat-cards">
-  <div class="col-4 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="s-today"   >—</div><div class="stat-label"></div></div></div>
-  <div class="col-4 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="s-repairs" >—</div><div class="stat-label"></div></div></div>
-  <div class="col-4 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-lowstock">—</div><div class="stat-label"></div></div></div>
-  <div class="col-4 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-invoices">—</div><div class="stat-label"></div></div></div>
-  <div class="col-4 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-lowstock">—</div><div class="stat-label"></div></div></div>
-  <div class="col-4 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-invoices">—</div><div class="stat-label"></div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="s-repairs">—</div><div class="stat-label">🔧 Open Repairs</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-lowstock">—</div><div class="stat-label">⚠ Low Stock</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-pending">—</div><div class="stat-label">⏳ Pending Invoices</div></div></div>
 </div>
 
+<!-- QUICK ACTIONS -->
+<h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">⚡ Quick Actions</h6>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <a href="/sales?action=add" class="qa-card" style="--qa-color:#2ed573">
+      <div class="qa-icon-wrap"><div class="qa-icon"></div><span>💰</span></div>
+      <div class="qa-text">
+        <div class="qa-title">New Sale</div>
+        <div class="qa-sub">Start a sale at the counter</div>
+      </div>
+      <div class="qa-plus">＋</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/repairs?action=add" class="qa-card" style="--qa-color:#ffa502">
+      <div class="qa-icon-wrap"><div class="qa-icon"></div><span>🔧</span></div>
+      <div class="qa-text">
+        <div class="qa-title">New Repair</div>
+        <div class="qa-sub">Open a repair ticket</div>
+      </div>
+      <div class="qa-plus">＋</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/customers?action=add" class="qa-card" style="--qa-color:#3742fa">
+      <div class="qa-icon-wrap"><div class="qa-icon"></div><span>👤</span></div>
+      <div class="qa-text">
+        <div class="qa-title">New Customer</div>
+        <div class="qa-sub">Register a client</div>
+      </div>
+      <div class="qa-plus">＋</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/inventory?action=add" class="qa-card" style="--qa-color:#ff4757">
+      <div class="qa-icon-wrap"><div class="qa-icon"></div><span>📦</span></div>
+      <div class="qa-text">
+        <div class="qa-title">New Product</div>
+        <div class="qa-sub">Add a part to stock</div>
+      </div>
+      <div class="qa-plus">＋</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/purchases?action=add" class="qa-card" style="--qa-color:#a855f7">
+      <div class="qa-icon-wrap"><div class="qa-icon"></div><span>🛒</span></div>
+      <div class="qa-text">
+        <div class="qa-title">New Purchase</div>
+        <div class="qa-sub">Restock from a supplier</div>
+      </div>
+      <div class="qa-plus">＋</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/suppliers?action=add" class="qa-card" style="--qa-color:#00b8d9">
+      <div class="qa-icon-wrap"><div class="qa-icon"></div><span>🏭</span></div>
+      <div class="qa-text">
+        <div class="qa-title">New Supplier</div>
+        <div class="qa-sub">Add a supplier contact</div>
+      </div>
+      <div class="qa-plus">＋</div>
+    </a>
+  </div>
+</div>
+
+<!-- RECENT SALES / REPAIRS -->
 <div class="row g-4">
   <div class="col-12 col-lg-6">
     <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🕐 Recent Sales</h6>
@@ -33,7 +92,7 @@
     <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🔧 Recent Repairs</h6>
     <div class="zmoto-card table-responsive">
       <table class="table table-hover mb-0">
-        <thead><tr><th>#</th><th>Customer</th><th>Vehicle</th></tr></thead>
+        <thead><tr><th>#</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Date</th></tr></thead>
         <tbody id="tbl-repairs"></tbody>
       </table>
     </div>
@@ -46,7 +105,8 @@
 apiG('/api/dashboard').done(function(d) {
   $('#s-today').text(fmt(d.sales_today));
   $('#s-repairs').text(d.repairs_open);
-  $('#s-lowstock').text(d.low_stock);
+  $('#s-lowstock').text(d.low_stock_count);
+  $('#s-pending').text(d.pending_invoices);
 
   const $rs = $('#tbl-sales').empty();
   d.recent_sales.length
@@ -55,8 +115,8 @@ apiG('/api/dashboard').done(function(d) {
 
   const $rr = $('#tbl-repairs').empty();
   d.recent_repairs.length
-    ? d.recent_repairs.forEach(r => $rr.append(`<tr><td>#${r.id}</td><td>${r.customer}</td><td>${r.vehicle||'—'}</td></tr>`))
-    : $rr.append('<tr><td colspan="6" class="text-center text-muted py-3">No repairs yet</td></tr>');
+    ? d.recent_repairs.forEach(r => $rr.append(`<tr><td>#${r.id}</td><td>${r.customer}</td><td>${r.vehicle||'—'}</td><td><span class="badge status-${r.status}">${r.status.replace('_',' ')}</span></td><td>${(r.created_at||'').slice(0,10)}</td></tr>`))
+    : $rr.append('<tr><td colspan="5" class="text-center text-muted py-3">No repairs yet</td></tr>');
 });
 </script>
 {% endblock %}

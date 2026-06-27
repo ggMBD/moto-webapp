@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% set active = "bikes" %}
+{% block title %}Bikes{% endblock %}
+{% block page_title %}🏍 Bikes{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <input class="form-control" id="search" placeholder="🔍 Search brand, model, plate, owner…" style="max-width:300px">
+  <div class="d-flex gap-2">
+    <button class="btn btn-danger btn-sm" id="btn-add">＋ Add Bike</button>
+    <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
+    <button class="btn btn-outline-warning btn-sm" id="btn-transfer">🔁 Transfer Owner</button>
+    <button class="btn btn-outline-danger btn-sm" id="btn-del">🗑 Delete</button>
+  </div>
+</div>
+
+<div class="zmoto-card table-responsive">
+  <table class="table table-hover mb-0">
+    <thead><tr><th>ID</th><th>Owner</th><th>Brand</th><th>Model</th><th>Year</th><th>Plate</th><th>Color</th><th>Mileage</th><th>Repairs</th></tr></thead>
+    <tbody id="tbl"></tbody>
+  </table>
+</div>
+
+<!-- Add/Edit Bike Modal -->
+<div class="modal fade" id="modalBike" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mtitle">Add Bike</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bid">
+        <div class="mb-2">
+          <label class="form-label">Owner *</label>
+          <select class="form-select" id="b-owner"></select>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label">Brand *</label><input class="form-control" id="b-brand" placeholder="Yamaha"></div>
+          <div class="col-6"><label class="form-label">Model</label><input class="form-control" id="b-model" placeholder="YBR 125"></div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-4"><label class="form-label">Year</label><input class="form-control" id="b-year" type="number" placeholder="2022"></div>
+          <div class="col-4"><label class="form-label">Plate</label><input class="form-control" id="b-plate" placeholder="123 TUN 4567"></div>
+          <div class="col-4"><label class="form-label">Color</label><input class="form-control" id="b-color" placeholder="Rouge"></div>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label">VIN / Châssis</label><input class="form-control" id="b-vin"></div>
+          <div class="col-6"><label class="form-label">Mileage (km)</label><input class="form-control" id="b-mileage" type="number" value="0"></div>
+        </div>
+        <div class="mb-2"><label class="form-label">Note</label><input class="form-control" id="b-note"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="btn-save">Save Bike</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Transfer Owner Modal -->
+<div class="modal fade" id="modalTransfer" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">🔁 Transfer Owner</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-2" id="transfer-info"></p>
+        <label class="form-label">New Owner *</label>
+        <select class="form-select" id="t-owner"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-warning btn-sm" id="btn-confirm-transfer">Transfer</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sel = null;
+let allCustomers = [];
+const modal = new bootstrap.Modal('#modalBike');
+const transferModal = new bootstrap.Modal('#modalTransfer');
+
+function loadCustomersIntoSelects() {
+  return apiG('/api/customers').done(function(custs) {
+    allCustomers = custs;
+    const opts = custs.map(c => `<option value="${c.id}">${c.name} — ${c.phone||'no phone'}</option>`).join('');
+    $('#b-owner, #t-owner').html(opts);
+  });
+}
+
+function load() {
+  apiG('/api/bikes?q='+encodeURIComponent($('#search').val())).done(function(rows) {
+    const $t = $('#tbl').empty();
+    if (!rows.length) { $t.append('<tr><td colspan="9" class="text-center text-muted py-4">No bikes found</td></tr>'); return; }
+    rows.forEach(r => {
+      $(`<tr>
+        <td>${r.id}</td>
+        <td><b>${r.owner_name}</b><br><span class="text-muted small">${r.owner_phone||''}</span></td>
+        <td>${r.brand}</td><td>${r.model||'—'}</td><td>${r.year||'—'}</td>
+        <td>${r.plate||'—'}</td><td>${r.color||'—'}</td><td>${r.mileage||0} km</td>
+        <td><span class="badge status-in_progress" id="rep-count-${r.id}">…</span></td>
+      </tr>`).on('click', function(){ $('#tbl tr').removeClass('table-active'); $(this).addClass('table-active'); sel=r; }).appendTo($t);
+
+      // lazy-load repair count
+      apiG('/api/bikes/'+r.id).done(d => $('#rep-count-'+r.id).text(d.repairs.length+' repairs'));
+    });
+  });
+}
+
+function openModal(d) {
+  $('#mtitle').text(d?'Edit Bike':'Add Bike');
+  $('#bid').val(d?.id||'');
+  loadCustomersIntoSelects().done(() => { if (d) $('#b-owner').val(d.owner_id); });
+  $('#b-brand').val(d?.brand||''); $('#b-model').val(d?.model||'');
+  $('#b-year').val(d?.year||''); $('#b-plate').val(d?.plate||'');
+  $('#b-color').val(d?.color||''); $('#b-vin').val(d?.vin||'');
+  $('#b-mileage').val(d?.mileage??0); $('#b-note').val(d?.note||'');
+  modal.show();
+}
+
+$('#search').on('input', load);
+$('#btn-add').on('click', () => openModal(null));
+$('#btn-edit').on('click', () => { if (!sel) { toast('Select a bike first','error'); return; } openModal(sel); });
+
+$('#btn-save').on('click', function() {
+  const id = $('#bid').val();
+  const body = {
+    owner_id: parseInt($('#b-owner').val()), brand: $('#b-brand').val().trim(), model: $('#b-model').val().trim(),
+    year: parseInt($('#b-year').val())||null, plate: $('#b-plate').val().trim(), color: $('#b-color').val().trim(),
+    vin: $('#b-vin').val().trim(), mileage: parseInt($('#b-mileage').val())||0, note: $('#b-note').val().trim()
+  };
+  if (!body.owner_id || !body.brand) { toast('Owner and Brand required','error'); return; }
+  (id ? apiU('/api/bikes/'+id, body) : apiP('/api/bikes', body))
+    .done(() => { modal.hide(); toast(id?'Bike updated!':'Bike added!'); sel=null; load(); })
+    .fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+
+$('#btn-del').on('click', function() {
+  if (!sel) { toast('Select a bike first','error'); return; }
+  if (!confirm(`Delete ${sel.brand} ${sel.model} (owner: ${sel.owner_name})?`)) return;
+  apiD('/api/bikes/'+sel.id).done(() => { sel=null; toast('Deleted'); load(); });
+});
+
+$('#btn-transfer').on('click', function() {
+  if (!sel) { toast('Select a bike first','error'); return; }
+  $('#transfer-info').text(`${sel.brand} ${sel.model||''} (${sel.plate||'no plate'}) — currently owned by ${sel.owner_name}`);
+  loadCustomersIntoSelects().done(() => $('#t-owner').val(sel.owner_id));
+  transferModal.show();
+});
+
+$('#btn-confirm-transfer').on('click', function() {
+  const newOwner = parseInt($('#t-owner').val());
+  if (!newOwner) { toast('Select a new owner','error'); return; }
+  if (newOwner === sel.owner_id) { toast('Bike already belongs to this owner','error'); return; }
+  apiU('/api/bikes/'+sel.id+'/transfer', { owner_id: newOwner })
+    .done(() => { transferModal.hide(); toast('Owner transferred!'); sel=null; load(); })
+    .fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+
+load();
+</script>
+{% endblock %}

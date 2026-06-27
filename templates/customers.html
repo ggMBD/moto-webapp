@@ -69,5 +69,10 @@ $('#btn-del').on('click',()=>{
   apiD('/api/customers/'+sel.id).done(()=>{sel=null;toast('Deleted');load();});
 });
 load();
+
+// Auto-open Add modal when arriving from dashboard quick action
+if (new URLSearchParams(window.location.search).get('action') === 'add') {
+  setTimeout(() => openModal(null), 150);
+}
 </script>
 {% endblock %}

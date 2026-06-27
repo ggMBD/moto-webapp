@@ -17,24 +17,23 @@ def get_repairs():
     status = request.args.get("status", "")
     q      = f"%{request.args.get('q','')}%"
     with get_db() as c:
+        base_select = """
+            SELECT r.*, COALESCE(cu.name,'—') as customer_name,
+                   COALESCE(u.full_name, u.username,'—') as technician,
+                   b.brand as bike_brand, b.model as bike_model, b.plate as bike_plate
+            FROM repairs r
+            LEFT JOIN customers cu ON r.customer_id=cu.id
+            LEFT JOIN users u      ON r.user_id=u.id
+            LEFT JOIN bikes b      ON r.bike_id=b.id
+        """
         if status:
-            data = rows(c.execute("""
-                SELECT r.*, COALESCE(cu.name,'—') as customer_name,
-                       COALESCE(u.full_name, u.username,'—') as technician
-                FROM repairs r
-                LEFT JOIN customers cu ON r.customer_id=cu.id
-                LEFT JOIN users u      ON r.user_id=u.id
-                WHERE r.status=? AND (cu.name LIKE ? OR r.vehicle LIKE ?)
-                ORDER BY r.id DESC""", (status, q, q)).fetchall())
+            data = rows(c.execute(base_select + """
+                WHERE r.status=? AND (cu.name LIKE ? OR r.vehicle LIKE ? OR b.brand LIKE ? OR b.plate LIKE ?)
+                ORDER BY r.id DESC""", (status, q, q, q, q)).fetchall())
         else:
-            data = rows(c.execute("""
-                SELECT r.*, COALESCE(cu.name,'—') as customer_name,
-                       COALESCE(u.full_name, u.username,'—') as technician
-                FROM repairs r
-                LEFT JOIN customers cu ON r.customer_id=cu.id
-                LEFT JOIN users u      ON r.user_id=u.id
-                WHERE (cu.name LIKE ? OR r.vehicle LIKE ?)
-                ORDER BY r.id DESC""", (q, q)).fetchall())
+            data = rows(c.execute(base_select + """
+                WHERE (cu.name LIKE ? OR r.vehicle LIKE ? OR b.brand LIKE ? OR b.plate LIKE ?)
+                ORDER BY r.id DESC""", (q, q, q, q)).fetchall())
     return jsonify(data)
 
 @repairs_bp.route("/api/repairs/<int:rid>", methods=["GET"])
@@ -43,10 +42,12 @@ def get_repair(rid):
     with get_db() as c:
         repair = c.execute("""
             SELECT r.*, COALESCE(cu.name,'—') as customer_name,
-                   COALESCE(u.full_name, u.username,'—') as technician
+                   COALESCE(u.full_name, u.username,'—') as technician,
+                   b.brand as bike_brand, b.model as bike_model, b.plate as bike_plate
             FROM repairs r
             LEFT JOIN customers cu ON r.customer_id=cu.id
             LEFT JOIN users u      ON r.user_id=u.id
+            LEFT JOIN bikes b      ON r.bike_id=b.id
             WHERE r.id=?""", (rid,)).fetchone()
         if not repair:
             return jsonify({"error": "Not found"}), 404
@@ -66,9 +67,9 @@ def add_repair():
     total      = labor
     with get_db() as c:
         c.execute("""INSERT INTO repairs
-                     (customer_id,user_id,vehicle,description,status,labor_cost,parts_cost,total,note)
-                     VALUES (?,?,?,?,?,?,?,?,?)""",
-                  (d.get("customer_id"), session["user_id"],
+                     (customer_id,bike_id,user_id,vehicle,description,status,labor_cost,parts_cost,total,note)
+                     VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                  (d.get("customer_id"), d.get("bike_id"), session["user_id"],
                    d.get("vehicle",""), d.get("description",""),
                    d.get("status","pending"), labor, parts_cost, total,
                    d.get("note","")))
@@ -81,10 +82,10 @@ def update_repair(rid):
     d = request.json
     with get_db() as c:
         c.execute("""UPDATE repairs SET
-                     customer_id=?, vehicle=?, description=?, status=?,
+                     customer_id=?, bike_id=?, vehicle=?, description=?, status=?,
                      labor_cost=?, note=?, updated_at=datetime('now')
                      WHERE id=?""",
-                  (d.get("customer_id"), d.get("vehicle",""),
+                  (d.get("customer_id"), d.get("bike_id"), d.get("vehicle",""),
                    d.get("description",""), d.get("status","pending"),
                    float(d.get("labor_cost",0)), d.get("note",""), rid))
         # Recalculate total
@@ -125,10 +126,8 @@ def delete_repair_part(rid, pid):
         part = c.execute("SELECT * FROM repair_parts WHERE id=? AND repair_id=?", (pid, rid)).fetchone()
         if not part:
             return jsonify({"error": "Not found"}), 404
-        # Return stock
         c.execute("UPDATE products SET qty = qty + ? WHERE id=?", (part["qty"], part["product_id"]))
         c.execute("DELETE FROM repair_parts WHERE id=?", (pid,))
-        # Update repair totals
         parts_cost = c.execute(
             "SELECT COALESCE(SUM(qty*unit_price),0) FROM repair_parts WHERE repair_id=?", (rid,)
         ).fetchone()[0]
@@ -141,7 +140,6 @@ def delete_repair_part(rid, pid):
 @login_required
 def delete_repair(rid):
     with get_db() as c:
-        # Return all parts to stock
         parts = rows(c.execute(
             "SELECT product_id, qty FROM repair_parts WHERE repair_id=?", (rid,)).fetchall())
         for p in parts:

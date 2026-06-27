@@ -103,9 +103,25 @@ def init_db():
                 FOREIGN KEY(product_id)  REFERENCES products(id),
                 FOREIGN KEY(user_id)     REFERENCES users(id)
             );
+            CREATE TABLE IF NOT EXISTS bikes (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                owner_id      INTEGER NOT NULL,
+                brand         TEXT DEFAULT '',
+                model         TEXT DEFAULT '',
+                year          INTEGER,
+                plate         TEXT DEFAULT '',
+                vin           TEXT DEFAULT '',
+                color         TEXT DEFAULT '',
+                mileage       INTEGER DEFAULT 0,
+                note          TEXT DEFAULT '',
+                created_at    TEXT DEFAULT (date('now')),
+                updated_at    TEXT DEFAULT (date('now')),
+                FOREIGN KEY(owner_id) REFERENCES customers(id)
+            );
             CREATE TABLE IF NOT EXISTS repairs (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 customer_id INTEGER,
+                bike_id     INTEGER,
                 user_id     INTEGER,
                 vehicle     TEXT DEFAULT '',
                 description TEXT DEFAULT '',
@@ -117,6 +133,7 @@ def init_db():
                 created_at  TEXT DEFAULT (datetime('now')),
                 updated_at  TEXT DEFAULT (datetime('now')),
                 FOREIGN KEY(customer_id) REFERENCES customers(id),
+                FOREIGN KEY(bike_id)     REFERENCES bikes(id),
                 FOREIGN KEY(user_id)     REFERENCES users(id)
             );
             CREATE TABLE IF NOT EXISTS repair_parts (

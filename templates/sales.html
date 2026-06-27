@@ -103,5 +103,10 @@ $('#btn-confirm').on('click',()=>{
 $('#btn-clear').on('click',()=>{cart=[];renderCart();$('#s-discount').val(0);$('#s-note').val('');});
 $('#btn-refresh').on('click', loadSales);
 loadPage(); renderCart();
+
+// Auto-focus the product search when arriving from dashboard quick action
+if (new URLSearchParams(window.location.search).get('action') === 'add') {
+  setTimeout(() => $('#s-prod-search').trigger('focus'), 300);
+}
 </script>
 {% endblock %}

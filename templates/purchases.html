@@ -55,5 +55,10 @@ $('#btn-save').on('click',()=>{
   apiP('/api/purchases',body).done(()=>{modal.hide();toast('Purchase saved! Stock updated.');load();});
 });
 load();
+
+// Auto-open Add modal when arriving from dashboard quick action
+if (new URLSearchParams(window.location.search).get('action') === 'add') {
+  setTimeout(() => $('#btn-add').trigger('click'), 150);
+}
 </script>
 {% endblock %}

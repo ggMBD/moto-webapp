@@ -13,6 +13,7 @@ from routes.sales      import sales_bp
 from routes.purchases  import purchases_bp
 from routes.repairs    import repairs_bp
 from routes.customers  import customers_bp
+from routes.bikes      import bikes_bp
 from routes.suppliers  import suppliers_bp
 from routes.reports    import reports_bp
 from routes.users      import users_bp
@@ -28,6 +29,7 @@ app.register_blueprint(sales_bp)
 app.register_blueprint(purchases_bp)
 app.register_blueprint(repairs_bp)
 app.register_blueprint(customers_bp)
+app.register_blueprint(bikes_bp)
 app.register_blueprint(suppliers_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(users_bp)
