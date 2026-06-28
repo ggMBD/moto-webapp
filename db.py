@@ -27,6 +27,27 @@ def rows(cursor_result):
     """Convert sqlite rows to list of dicts."""
     return [dict(r) for r in cursor_result]
 
+def next_invoice_number(conn, table, prefix):
+    """
+    Generate the next invoice number for a table, e.g. INV-0045 or REP-0012.
+    Looks at the highest existing numeric suffix for that prefix and increments it.
+    Safe to call inside an existing transaction (uses the same connection).
+    """
+    row = conn.execute(
+        f"""SELECT invoice_number FROM {table}
+            WHERE invoice_number LIKE ?
+            ORDER BY id DESC LIMIT 1""",
+        (f"{prefix}-%",)
+    ).fetchone()
+    if row and row["invoice_number"]:
+        try:
+            last_n = int(row["invoice_number"].split("-")[-1])
+        except ValueError:
+            last_n = 0
+    else:
+        last_n = 0
+    return f"{prefix}-{last_n + 1:04d}"
+
 def init_db():
     with get_db() as c:
         c.executescript("""
@@ -70,13 +91,17 @@ def init_db():
                 created_at TEXT DEFAULT (date('now'))
             );
             CREATE TABLE IF NOT EXISTS sales (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_id INTEGER,
-                user_id     INTEGER,
-                total       REAL DEFAULT 0,
-                discount    REAL DEFAULT 0,
-                note        TEXT DEFAULT '',
-                created_at  TEXT DEFAULT (datetime('now')),
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_number  TEXT UNIQUE,
+                customer_id     INTEGER,
+                user_id         INTEGER,
+                total           REAL DEFAULT 0,
+                discount        REAL DEFAULT 0,
+                payment_method  TEXT DEFAULT 'cash',
+                payment_status  TEXT DEFAULT 'paid',
+                amount_paid     REAL DEFAULT 0,
+                note            TEXT DEFAULT '',
+                created_at      TEXT DEFAULT (datetime('now')),
                 FOREIGN KEY(customer_id) REFERENCES customers(id),
                 FOREIGN KEY(user_id)     REFERENCES users(id)
             );
@@ -119,19 +144,23 @@ def init_db():
                 FOREIGN KEY(owner_id) REFERENCES customers(id)
             );
             CREATE TABLE IF NOT EXISTS repairs (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                customer_id INTEGER,
-                bike_id     INTEGER,
-                user_id     INTEGER,
-                vehicle     TEXT DEFAULT '',
-                description TEXT DEFAULT '',
-                status      TEXT DEFAULT 'pending',
-                labor_cost  REAL DEFAULT 0,
-                parts_cost  REAL DEFAULT 0,
-                total       REAL DEFAULT 0,
-                note        TEXT DEFAULT '',
-                created_at  TEXT DEFAULT (datetime('now')),
-                updated_at  TEXT DEFAULT (datetime('now')),
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_number  TEXT UNIQUE,
+                customer_id     INTEGER,
+                bike_id         INTEGER,
+                user_id         INTEGER,
+                vehicle         TEXT DEFAULT '',
+                description     TEXT DEFAULT '',
+                status          TEXT DEFAULT 'pending',
+                labor_cost      REAL DEFAULT 0,
+                parts_cost      REAL DEFAULT 0,
+                total           REAL DEFAULT 0,
+                payment_method  TEXT DEFAULT 'cash',
+                payment_status  TEXT DEFAULT 'unpaid',
+                amount_paid     REAL DEFAULT 0,
+                note            TEXT DEFAULT '',
+                created_at      TEXT DEFAULT (datetime('now')),
+                updated_at      TEXT DEFAULT (datetime('now')),
                 FOREIGN KEY(customer_id) REFERENCES customers(id),
                 FOREIGN KEY(bike_id)     REFERENCES bikes(id),
                 FOREIGN KEY(user_id)     REFERENCES users(id)

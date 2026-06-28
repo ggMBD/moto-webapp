@@ -2,46 +2,119 @@
 {% set active = "sales" %}
 {% block title %}Sales{% endblock %}
 {% block page_title %}💰 Sales{% endblock %}
+
 {% block content %}
-<div class="row g-3">
-  <!-- LEFT: New Sale -->
-  <div class="col-12 col-lg-4">
-    <div class="zmoto-card p-3 mb-3">
-      <div class="fw-bold mb-3" style="color:#ffa502;font-family:'Barlow Condensed',sans-serif">🧾 New Sale</div>
-      <div class="mb-2"><label class="form-label">Customer</label><select class="form-select form-select-sm" id="s-customer"><option value="">— Walk-in —</option></select></div>
-      <div class="mb-2">
-        <label class="form-label">Product</label>
-        <input class="form-control form-control-sm" id="s-prod-search" placeholder="Type ref or name…">
-        <div class="prod-search-list" id="s-prod-list"></div>
+<!-- TABS -->
+<ul class="nav nav-tabs zmoto-tabs mb-3" id="salesTabs">
+  <li class="nav-item">
+    <button class="nav-link active" id="tab-new-btn" data-bs-toggle="tab" data-bs-target="#tab-new">🧾 New Sale</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" id="tab-history-btn" data-bs-toggle="tab" data-bs-target="#tab-history">📜 Sale History</button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  <!-- ══════════ TAB 1: NEW SALE ══════════ -->
+  <div class="tab-pane fade show active" id="tab-new">
+    <div class="row g-3">
+      <!-- LEFT: Customer + Product entry -->
+      <div class="col-12 col-lg-5">
+        <div class="zmoto-card p-3 mb-3">
+          <div class="fw-bold mb-3 section-accent">👤 Customer</div>
+          <div class="position-relative mb-2">
+            <input class="form-control" id="cust-search" placeholder="Search customer by name or phone…" autocomplete="off">
+            <div class="prod-search-list" id="cust-search-list"></div>
+          </div>
+          <div id="cust-selected" class="d-none">
+            <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:var(--surface)">
+              <div class="avatar-circle" id="cust-avatar">?</div>
+              <div class="flex-grow-1 min-w-0">
+                <div class="fw-bold" id="cust-name">—</div>
+                <div class="text-muted small" id="cust-meta">—</div>
+              </div>
+              <button class="btn btn-sm btn-outline-danger" id="btn-clear-customer">✕</button>
+            </div>
+          </div>
+          <div id="cust-walkin-label" class="text-muted small">No customer selected — sale will be Walk-in</div>
+        </div>
+
+        <div class="zmoto-card p-3">
+          <div class="fw-bold mb-3 section-accent">📦 Add Products</div>
+          <div class="position-relative mb-2">
+            <input class="form-control" id="s-prod-search" placeholder="Search by name, ref, or barcode…" autocomplete="off">
+            <div class="prod-search-list" id="s-prod-list"></div>
+          </div>
+          <div class="row g-2">
+            <div class="col-6"><label class="form-label">Qty</label><input class="form-control" id="s-qty" type="number" value="1" min="1"></div>
+            <div class="col-6 d-flex align-items-end"><button class="btn btn-danger w-100" id="btn-add-cart">Add to Cart ➕</button></div>
+          </div>
+        </div>
       </div>
-      <div class="row g-2 mb-2">
-        <div class="col-6"><label class="form-label">Qty</label><input class="form-control form-control-sm" id="s-qty" type="number" value="1" min="1"></div>
-        <div class="col-6 d-flex align-items-end"><button class="btn btn-danger btn-sm w-100" id="btn-add-cart">Add ➕</button></div>
-      </div>
-    </div>
-    <div class="zmoto-card p-3">
-      <div class="fw-bold mb-2" style="color:#ffa502;font-family:'Barlow Condensed',sans-serif">🛒 Cart</div>
-      <div class="table-responsive mb-2">
-        <table class="table table-sm mb-0"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Sub</th><th></th></tr></thead><tbody id="cart-body"></tbody></table>
-      </div>
-      <div class="row g-2 mb-2">
-        <div class="col-6"><label class="form-label">Discount (TND)</label><input class="form-control form-control-sm" id="s-discount" type="number" value="0" min="0"></div>
-        <div class="col-6"><label class="form-label">Note</label><input class="form-control form-control-sm" id="s-note"></div>
-      </div>
-      <div class="d-flex justify-content-between align-items-center p-2 rounded mb-2" style="background:var(--surface)">
-        <span class="text-muted small">Total</span>
-        <span id="cart-total" style="font-family:'Barlow Condensed',sans-serif;font-size:1.4rem;font-weight:800;color:#2ed573">0.00 TND</span>
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-success btn-sm flex-fill" id="btn-confirm">✔ Confirm Sale</button>
-        <button class="btn btn-outline-danger btn-sm" id="btn-clear">Clear</button>
+
+      <!-- RIGHT: Cart + checkout -->
+      <div class="col-12 col-lg-7">
+        <div class="zmoto-card p-3">
+          <div class="fw-bold mb-2 section-accent">🛒 Cart</div>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm mb-0"><thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Sub</th><th></th></tr></thead><tbody id="cart-body"></tbody></table>
+          </div>
+
+          <div class="row g-2 mb-2">
+            <div class="col-6"><label class="form-label">Discount (TND)</label><input class="form-control" id="s-discount" type="number" value="0" min="0"></div>
+            <div class="col-6"><label class="form-label">Note</label><input class="form-control" id="s-note"></div>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label">Payment Method</label>
+              <select class="form-select" id="s-pay-method">
+                <option value="cash">💵 Cash</option>
+                <option value="card">💳 Card</option>
+                <option value="bank_transfer">🏦 Bank Transfer</option>
+                <option value="mixed">🔀 Mixed</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Payment Status</label>
+              <select class="form-select" id="s-pay-status">
+                <option value="paid">✅ Paid in Full</option>
+                <option value="partial">🟡 Partial Payment</option>
+                <option value="unpaid">🔴 Unpaid (Credit)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-2 mb-3 d-none" id="s-amount-paid-row">
+            <div class="col-6">
+              <label class="form-label">Amount Paid Now (TND)</label>
+              <input class="form-control" id="s-amount-paid" type="number" step="0.01" value="0" min="0">
+            </div>
+            <div class="col-6 d-flex flex-column justify-content-end">
+              <span class="text-muted small">Balance due after this payment</span>
+              <span class="fw-bold" id="s-balance-preview" style="color:#ff4757">0.00 TND</span>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center p-3 rounded mb-3" style="background:var(--surface)">
+            <span class="text-muted">Total</span>
+            <span id="cart-total" class="cart-total-display">0.00 TND</span>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="btn btn-success flex-fill" id="btn-confirm">✔ Confirm Sale</button>
+            <button class="btn btn-outline-danger" id="btn-clear">Clear</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <!-- RIGHT: History -->
-  <div class="col-12 col-lg-8">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-      <span class="fw-bold" style="font-family:'Barlow Condensed',sans-serif">📜 Sales History</span>
+
+  <!-- ══════════ TAB 2: SALE HISTORY ══════════ -->
+  <div class="tab-pane fade" id="tab-history">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+      <span class="text-muted small" id="sales-summary"></span>
       <div class="d-flex flex-wrap gap-2 align-items-center">
         <input type="date" class="form-control form-control-sm" id="from-date" style="width:140px">
         <span class="text-muted small">→</span>
@@ -52,55 +125,120 @@
       </div>
     </div>
     <div class="zmoto-card table-responsive">
-      <table class="table table-hover mb-0"><thead><tr><th>#</th><th>Customer</th><th>Total</th><th>Disc.</th><th>Seller</th><th>Note</th><th>Date</th></tr></thead><tbody id="tbl-sales"></tbody></table>
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Invoice</th><th>Customer</th><th>Total</th><th>Disc.</th><th>Payment</th><th>Seller</th><th>Date</th><th></th></tr></thead>
+        <tbody id="tbl-sales"></tbody>
+      </table>
     </div>
-    <div class="text-end text-muted small mt-1" id="sales-summary"></div>
+  </div>
+
+</div>
+
+<!-- SALE DETAIL MODAL -->
+<div class="modal fade" id="modalSaleDetail" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="detail-title">Sale Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="text-muted small">Customer</div>
+            <div class="fw-bold" id="detail-customer">—</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Payment</div>
+            <div id="detail-payment">—</div>
+          </div>
+        </div>
+        <div class="table-responsive zmoto-card">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>Sub</th></tr></thead>
+            <tbody id="detail-items"></tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-end mt-3">
+          <table class="table table-sm" style="width:auto">
+            <tr><td class="text-muted">Subtotal</td><td class="text-end" id="detail-subtotal">—</td></tr>
+            <tr><td class="text-muted">Discount</td><td class="text-end" id="detail-discount">—</td></tr>
+            <tr><td class="fw-bold">Total</td><td class="text-end fw-bold" id="detail-total">—</td></tr>
+            <tr><td class="text-muted">Amount Paid</td><td class="text-end" id="detail-paid">—</td></tr>
+            <tr><td class="text-muted">Balance Due</td><td class="text-end" id="detail-balance">—</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        <a class="btn btn-danger btn-sm" id="btn-print-invoice" target="_blank">🖨 Print Invoice</a>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
+
 {% block extra_js %}
 <script>
-let cart=[], selProd=null;
-function loadPage() {
-  $.when(apiG('/api/customers'), apiG('/api/products')).done(function(cr,pr) {
-    const $s=$('#s-customer').empty().append('<option value="">— Walk-in —</option>');
-    cr[0].forEach(c => $s.append(`<option value="${c.id}">${c.name}</option>`));
-    window._allProds = pr[0];
-    loadSales();
+let cart = [], selProd = null, selCustomer = null;
+
+// ── CUSTOMER SEARCH ──────────────────────────────────────────
+$('#cust-search').on('input', function() {
+  const q = $(this).val().trim();
+  const $l = $('#cust-search-list').empty();
+  if (!q) return;
+  apiG('/api/customers?q='+encodeURIComponent(q)).done(function(rows) {
+    rows.slice(0,8).forEach(c => {
+      const initials = c.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+      $(`<div class="psl-item">
+        <span class="d-flex align-items-center gap-2">
+          <span class="avatar-circle-sm">${initials}</span>
+          <span><b>${c.name}</b><br><span class="text-muted small">CUST-${String(c.id).padStart(4,'0')} • ${c.phone||'no phone'}</span></span>
+        </span>
+      </div>`).on('click', function() {
+        selCustomer = c;
+        $('#cust-search').val('');
+        $l.empty();
+        showSelectedCustomer();
+      }).appendTo($l);
+    });
   });
+});
+
+function showSelectedCustomer() {
+  if (!selCustomer) {
+    $('#cust-selected').addClass('d-none');
+    $('#cust-walkin-label').removeClass('d-none');
+    return;
+  }
+  const initials = selCustomer.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  $('#cust-avatar').text(initials);
+  $('#cust-name').text(selCustomer.name);
+  $('#cust-meta').text(`CUST-${String(selCustomer.id).padStart(4,'0')} • ${selCustomer.phone||'no phone'}`);
+  $('#cust-selected').removeClass('d-none');
+  $('#cust-walkin-label').addClass('d-none');
 }
+
+$('#btn-clear-customer').on('click', function() {
+  selCustomer = null;
+  showSelectedCustomer();
+});
+
+// ── PRODUCT SEARCH ───────────────────────────────────────────
 function filterProds() {
-  const q=$('#s-prod-search').val().toLowerCase(), $l=$('#s-prod-list').empty();
+  const q = $('#s-prod-search').val().toLowerCase(), $l = $('#s-prod-list').empty();
   if (!q) return;
   (window._allProds||[]).filter(p=>p.name.toLowerCase().includes(q)||p.ref.toLowerCase().includes(q)).slice(0,10).forEach(p => {
     $(`<div class="psl-item ${p.qty<=0?'out':''}"><span><b>${p.ref}</b> ${p.name}</span><span class="text-muted">${fmt(p.sell_price)} <span style="color:${p.qty<=5?'#ff4757':'#2ed573'}">×${p.qty}</span></span></div>`)
       .on('click',()=>{ selProd=p; $('#s-prod-search').val(p.ref+' — '+p.name); $l.empty(); }).appendTo($l);
   });
 }
-function renderCart() {
-  const $t=$('#cart-body').empty();
-  if (!cart.length) { $t.append('<tr><td colspan="5" class="text-center text-muted py-2">Empty</td></tr>'); }
-  else cart.forEach((item,i)=>{ $(`<tr><td>${item.name}</td><td>${item.qty}</td><td>${fmt(item.unit_price)}</td><td>${fmt(item.qty*item.unit_price)}</td><td><button class="btn btn-outline-danger btn-sm">×</button></td></tr>`).find('button').on('click',()=>{cart.splice(i,1);renderCart();}).end().appendTo($t); });
-  const disc=parseFloat($('#s-discount').val())||0, total=cart.reduce((s,i)=>s+i.qty*i.unit_price,0)-disc;
-  $('#cart-total').text(fmt(Math.max(total,0))+' TND');
-}
-function loadSales() {
-  const from = $('#from-date').val();
-  const to   = $('#to-date').val();
-  let url = '/api/sales';
-  if (from) url += `?from_date=${from}&to_date=${to}`;
-
-  apiG(url).done(rows => {
-    const $t=$('#tbl-sales').empty();
-    rows.length ? rows.forEach(r=>$t.append(`<tr><td>#${r.id}</td><td>${r.customer}</td><td>${fmt(r.total)} TND</td><td>${fmt(r.discount)}</td><td>${r.seller}</td><td>${r.note||'—'}</td><td>${(r.created_at||'').slice(0,16)}</td></tr>`))
-                : $t.append('<tr><td colspan="7" class="text-center text-muted py-3">No sales found for this period</td></tr>');
-
-    const totalRev = rows.reduce((s,r)=>s+r.total,0);
-    $('#sales-summary').text(rows.length ? `${rows.length} sale(s) — total ${fmt(totalRev)} TND` : '');
-  });
-}
 $('#s-prod-search').on('input', filterProds);
-$('#s-discount').on('input', renderCart);
+
+function loadProducts() {
+  return apiG('/api/products').done(p => { window._allProds = p; });
+}
+
 $('#btn-add-cart').on('click',()=>{
   if (!selProd){toast('Select a product','error');return;}
   const qty=parseInt($('#s-qty').val())||1;
@@ -110,17 +248,139 @@ $('#btn-add-cart').on('click',()=>{
   else cart.push({product_id:selProd.id,name:selProd.name,qty,unit_price:selProd.sell_price});
   renderCart(); selProd=null; $('#s-prod-search').val(''); $('#s-qty').val(1);
 });
+
+// ── CART ──────────────────────────────────────────────────────
+function renderCart() {
+  const $t=$('#cart-body').empty();
+  if (!cart.length) { $t.append('<tr><td colspan="5" class="text-center text-muted py-3">Cart is empty</td></tr>'); }
+  else cart.forEach((item,i)=>{ $(`<tr><td>${item.name}</td><td>${item.qty}</td><td>${fmt(item.unit_price)}</td><td>${fmt(item.qty*item.unit_price)}</td><td><button class="btn btn-outline-danger btn-sm">×</button></td></tr>`).find('button').on('click',()=>{cart.splice(i,1);renderCart();}).end().appendTo($t); });
+  updateTotals();
+}
+
+function currentTotal() {
+  const disc = parseFloat($('#s-discount').val())||0;
+  return Math.max(cart.reduce((s,i)=>s+i.qty*i.unit_price,0) - disc, 0);
+}
+
+function updateTotals() {
+  const total = currentTotal();
+  $('#cart-total').text(fmt(total)+' TND');
+  const paidNow = parseFloat($('#s-amount-paid').val())||0;
+  $('#s-balance-preview').text(fmt(Math.max(total - paidNow,0))+' TND');
+}
+$('#s-discount').on('input', updateTotals);
+$('#s-amount-paid').on('input', updateTotals);
+
+// Show/hide "amount paid now" row based on payment status
+$('#s-pay-status').on('change', function() {
+  const status = $(this).val();
+  if (status === 'partial') {
+    $('#s-amount-paid-row').removeClass('d-none');
+    $('#s-amount-paid').val(0);
+  } else {
+    $('#s-amount-paid-row').addClass('d-none');
+  }
+  updateTotals();
+});
+
+// ── CONFIRM SALE ─────────────────────────────────────────────
 $('#btn-confirm').on('click',()=>{
   if(!cart.length){toast('Cart is empty','error');return;}
-  apiP('/api/sales',{customer_id:$('#s-customer').val()||null,discount:parseFloat($('#s-discount').val())||0,note:$('#s-note').val(),items:cart})
-    .done(res=>{toast('Sale #'+res.id+' — '+fmt(res.total)+' TND');cart=[];renderCart();$('#s-discount').val(0);$('#s-note').val('');loadSales();apiG('/api/products').done(p=>{window._allProds=p;});})
+  const total = currentTotal();
+  const payStatus = $('#s-pay-status').val();
+  let amountPaid = total;
+  if (payStatus === 'unpaid') amountPaid = 0;
+  else if (payStatus === 'partial') amountPaid = parseFloat($('#s-amount-paid').val())||0;
+
+  apiP('/api/sales',{
+    customer_id: selCustomer ? selCustomer.id : null,
+    discount: parseFloat($('#s-discount').val())||0,
+    note: $('#s-note').val(),
+    items: cart,
+    payment_method: $('#s-pay-method').val(),
+    payment_status: payStatus,
+    amount_paid: amountPaid,
+  }).done(res=>{
+      toast('Sale '+res.invoice_number+' confirmed — '+fmt(res.total)+' TND');
+      cart=[]; renderCart();
+      $('#s-discount').val(0); $('#s-note').val(''); $('#s-amount-paid').val(0);
+      $('#s-pay-status').val('paid').trigger('change');
+      selCustomer = null; showSelectedCustomer();
+      loadProducts();
+      loadSales();
+    })
     .fail(r=>toast(r.responseJSON?.error||'Error','error'));
 });
-$('#btn-clear').on('click',()=>{cart=[];renderCart();$('#s-discount').val(0);$('#s-note').val('');});
 
-const todayISO = new Date().toISOString().split('T')[0];
-$('#from-date').val(todayISO);
-$('#to-date').val(todayISO);
+$('#btn-clear').on('click',()=>{
+  cart=[]; renderCart();
+  $('#s-discount').val(0); $('#s-note').val(''); $('#s-amount-paid').val(0);
+  $('#s-pay-status').val('paid').trigger('change');
+  selCustomer = null; showSelectedCustomer();
+});
+
+// ── SALE HISTORY ──────────────────────────────────────────────
+function payBadge(status) {
+  const cls = status === 'paid' ? 'pay-paid' : (status === 'partial' ? 'pay-partial' : 'pay-unpaid');
+  const label = status === 'paid' ? 'Paid' : (status === 'partial' ? 'Partial' : 'Unpaid');
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function loadSales() {
+  const from = $('#from-date').val();
+  const to   = $('#to-date').val();
+  let url = '/api/sales';
+  if (from) url += `?from_date=${from}&to_date=${to}`;
+
+  apiG(url).done(rows => {
+    const $t=$('#tbl-sales').empty();
+    rows.length ? rows.forEach(r=>$t.append(`
+      <tr data-id="${r.id}">
+        <td>${r.invoice_number||'#'+r.id}</td><td>${r.customer}</td>
+        <td>${fmt(r.total)} TND</td><td>${fmt(r.discount)}</td>
+        <td>${payBadge(r.payment_status)}</td><td>${r.seller}</td>
+        <td>${(r.created_at||'').slice(0,16)}</td>
+        <td><button class="btn btn-outline-secondary btn-sm">View</button></td>
+      </tr>`))
+                : $t.append('<tr><td colspan="8" class="text-center text-muted py-3">No sales found for this period</td></tr>');
+
+    $t.find('button').on('click', function() {
+      openSaleDetail($(this).closest('tr').data('id'));
+    });
+    $t.find('tr').on('click', function(e) {
+      if (!$(e.target).is('button')) openSaleDetail($(this).data('id'));
+    });
+
+    const totalRev = rows.reduce((s,r)=>s+r.total,0);
+    $('#sales-summary').text(rows.length ? `${rows.length} sale(s) — total ${fmt(totalRev)} TND` : '');
+  });
+}
+
+function openSaleDetail(sid) {
+  apiG('/api/sales/'+sid).done(function(d) {
+    const s = d.sale;
+    $('#detail-title').text('Sale '+(s.invoice_number||'#'+s.id));
+    $('#detail-customer').text(s.customer_name || 'Walk-in');
+    $('#detail-payment').html(payBadge(s.payment_status) + ' via ' + (s.payment_method||'cash').replace('_',' '));
+
+    const $items = $('#detail-items').empty();
+    let subtotal = 0;
+    d.items.forEach(it => {
+      const sub = it.qty * it.unit_price;
+      subtotal += sub;
+      $items.append(`<tr><td>${it.product_name}</td><td>${it.qty}</td><td>${fmt(it.unit_price)}</td><td>${fmt(sub)}</td></tr>`);
+    });
+
+    $('#detail-subtotal').text(fmt(subtotal)+' TND');
+    $('#detail-discount').text('-'+fmt(s.discount)+' TND');
+    $('#detail-total').text(fmt(s.total)+' TND');
+    $('#detail-paid').text(fmt(s.amount_paid)+' TND');
+    $('#detail-balance').text(fmt(Math.max(s.total-s.amount_paid,0))+' TND');
+
+    $('#btn-print-invoice').attr('href', '/api/sales/'+sid+'/invoice.pdf');
+    new bootstrap.Modal('#modalSaleDetail').show();
+  });
+}
 
 $('#btn-filter').on('click', loadSales);
 $('#btn-today').on('click', function() {
@@ -129,9 +389,17 @@ $('#btn-today').on('click', function() {
   loadSales();
 });
 $('#btn-refresh').on('click', loadSales);
-loadPage(); renderCart();
 
-// Auto-focus the product search when arriving from dashboard quick action
+const todayISO = new Date().toISOString().split('T')[0];
+$('#from-date').val(todayISO);
+$('#to-date').val(todayISO);
+
+// ── INIT ──────────────────────────────────────────────────────
+loadProducts();
+loadSales();
+renderCart();
+
+// Auto-focus product search when arriving from dashboard quick action
 if (new URLSearchParams(window.location.search).get('action') === 'add') {
   setTimeout(() => $('#s-prod-search').trigger('focus'), 300);
 }

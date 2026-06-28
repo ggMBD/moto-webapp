@@ -21,22 +21,30 @@ def get_customers():
 @customers_bp.route("/api/customers", methods=["POST"])
 @login_required
 def add_customer():
-    d = request.json
+    d = request.json or {}
     if not d.get("name") or not d.get("cin"):
         return jsonify({"error": "Name and CIN are required"}), 400
+    payload = {
+        "name": d.get("name", ""), "cin": d.get("cin", ""),
+        "phone": d.get("phone", ""), "email": d.get("email", ""), "address": d.get("address", ""),
+    }
     with get_db() as c:
-        c.execute("INSERT INTO customers (name,cin,phone,email,address) VALUES (:name,:cin,:phone,:email,:address)", d)
+        c.execute("INSERT INTO customers (name,cin,phone,email,address) VALUES (:name,:cin,:phone,:email,:address)", payload)
         cid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
     return jsonify({"id": cid}), 201
 
 @customers_bp.route("/api/customers/<int:cid>", methods=["PUT"])
 @login_required
 def update_customer(cid):
-    d = request.json; d["id"] = cid
+    d = request.json or {}
     if not d.get("name") or not d.get("cin"):
         return jsonify({"error": "Name and CIN are required"}), 400
+    payload = {
+        "id": cid, "name": d.get("name", ""), "cin": d.get("cin", ""),
+        "phone": d.get("phone", ""), "email": d.get("email", ""), "address": d.get("address", ""),
+    }
     with get_db() as c:
-        c.execute("UPDATE customers SET name=:name,cin=:cin,phone=:phone,email=:email,address=:address WHERE id=:id", d)
+        c.execute("UPDATE customers SET name=:name,cin=:cin,phone=:phone,email=:email,address=:address WHERE id=:id", payload)
     return jsonify({"ok": True})
 
 @customers_bp.route("/api/customers/<int:cid>", methods=["DELETE"])

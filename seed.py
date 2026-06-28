@@ -240,10 +240,14 @@ def build():
         );
         CREATE TABLE sales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_number TEXT UNIQUE,
             customer_id INTEGER,
             user_id INTEGER,
             total REAL DEFAULT 0,
             discount REAL DEFAULT 0,
+            payment_method TEXT DEFAULT 'cash',
+            payment_status TEXT DEFAULT 'paid',
+            amount_paid REAL DEFAULT 0,
             note TEXT DEFAULT '',
             created_at TEXT DEFAULT (datetime('now')),
             FOREIGN KEY(customer_id) REFERENCES customers(id),
@@ -289,6 +293,7 @@ def build():
         );
         CREATE TABLE repairs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_number TEXT UNIQUE,
             customer_id INTEGER,
             bike_id INTEGER,
             user_id INTEGER,
@@ -298,6 +303,9 @@ def build():
             labor_cost REAL DEFAULT 0,
             parts_cost REAL DEFAULT 0,
             total REAL DEFAULT 0,
+            payment_method TEXT DEFAULT 'cash',
+            payment_status TEXT DEFAULT 'unpaid',
+            amount_paid REAL DEFAULT 0,
             note TEXT DEFAULT '',
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now')),
@@ -313,6 +321,14 @@ def build():
             unit_price REAL NOT NULL,
             FOREIGN KEY(repair_id) REFERENCES repairs(id),
             FOREIGN KEY(product_id) REFERENCES products(id)
+        );
+        CREATE TABLE repair_labor (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            repair_id INTEGER NOT NULL,
+            description TEXT DEFAULT '',
+            qty INTEGER DEFAULT 1,
+            unit_price REAL DEFAULT 0,
+            FOREIGN KEY(repair_id) REFERENCES repairs(id)
         );
     """)
     conn.commit()
@@ -405,6 +421,8 @@ def build():
 
     # ── Sales ────────────────────────────────────────────────
     print("  💰  Seeding sales…")
+    PAYMENT_METHODS = ["cash", "cash", "cash", "card", "bank_transfer"]
+    sale_n = 0
     for _ in range(200):
         cid      = random.choice(cust_ids + [None, None])  # some walk-ins
         dt       = rand_date(365)
@@ -429,9 +447,26 @@ def build():
         discount = round(random.choice([0, 0, 0, 0, 2, 5, 10, 0]), 2)
         total    = max(subtotal - discount, 0)
 
-        conn.execute("""INSERT INTO sales (customer_id,user_id,total,discount,note,created_at)
-                        VALUES (?,?,?,?,?,?)""",
-                     (cid, 1, total, discount, "", dt))
+        # Most sales are paid in full immediately (counter sales). A small
+        # fraction are on credit (partial or unpaid) — mostly for known
+        # customers, never for walk-ins.
+        if cid and random.random() < 0.12:
+            payment_status = random.choice(["unpaid", "partial"])
+            amount_paid = 0 if payment_status == "unpaid" else round(total * random.uniform(0.3, 0.7), 2)
+        else:
+            payment_status = "paid"
+            amount_paid = total
+
+        sale_n += 1
+        invoice_number = f"INV-{sale_n:04d}"
+        payment_method = random.choice(PAYMENT_METHODS)
+
+        conn.execute("""INSERT INTO sales
+                        (invoice_number,customer_id,user_id,total,discount,
+                         payment_method,payment_status,amount_paid,note,created_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                     (invoice_number, cid, 1, total, discount,
+                      payment_method, payment_status, amount_paid, "", dt))
         sid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
         for pid, qty, price in items:
@@ -447,6 +482,7 @@ def build():
 
     # ── Repairs ──────────────────────────────────────────────
     print("  🔧  Seeding repairs…")
+    repair_n = 0
     for _ in range(80):
         cid          = random.choice(cust_ids)
         owned_bikes  = bike_ids_by_customer.get(cid, [])
@@ -475,11 +511,43 @@ def build():
 
         total = labor + parts_cost
 
+        # Payment logic mirrors real shop behaviour: finished jobs are
+        # usually paid (mostly in full, sometimes partially settled);
+        # anything still in progress / pending / waiting parts is unpaid.
+        if status == "done":
+            payment_status = random.choices(["paid", "partial"], weights=[85, 15])[0]
+            amount_paid = total if payment_status == "paid" else round(total * random.uniform(0.4, 0.8), 2)
+        elif status == "cancelled":
+            payment_status = "unpaid"
+            amount_paid = 0
+        else:
+            payment_status = random.choices(["unpaid", "partial"], weights=[80, 20])[0]
+            amount_paid = 0 if payment_status == "unpaid" else round(total * random.uniform(0.2, 0.5), 2)
+
+        repair_n += 1
+        invoice_number = f"REP-{repair_n:04d}"
+        payment_method = random.choice(["cash", "cash", "card", "bank_transfer"])
+
         conn.execute("""INSERT INTO repairs
-                        (customer_id,bike_id,user_id,vehicle,description,status,labor_cost,parts_cost,total,note,created_at,updated_at)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-                     (cid, bike_id, 1, vehicle, desc, status, labor, parts_cost, total, note, dt, dt))
+                        (invoice_number,customer_id,bike_id,user_id,vehicle,description,status,
+                         labor_cost,parts_cost,total,payment_method,payment_status,amount_paid,
+                         note,created_at,updated_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                     (invoice_number, cid, bike_id, 1, vehicle, desc, status, labor, parts_cost, total,
+                      payment_method, payment_status, amount_paid, note, dt, dt))
         rid = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        # Split the job's labor amount into 1-2 realistic labor lines
+        if labor > 40:
+            diag_amount  = round(labor * 0.3, 2)
+            work_amount  = round(labor - diag_amount, 2)
+            conn.execute("INSERT INTO repair_labor (repair_id,description,qty,unit_price) VALUES (?,?,?,?)",
+                         (rid, "Diagnostic", 1, diag_amount))
+            conn.execute("INSERT INTO repair_labor (repair_id,description,qty,unit_price) VALUES (?,?,?,?)",
+                         (rid, "Main d'œuvre", 1, work_amount))
+        elif labor > 0:
+            conn.execute("INSERT INTO repair_labor (repair_id,description,qty,unit_price) VALUES (?,?,?,?)",
+                         (rid, "Main d'œuvre", 1, labor))
 
         if status == "done":
             for pid, qty, price in valid_parts:

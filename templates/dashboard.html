@@ -6,10 +6,46 @@
 {% block content %}
 <!-- TOP STATS -->
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="s-today">—</div><div class="stat-label">💰 Today (TND)</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="s-repairs">—</div><div class="stat-label">🔧 Open Repairs</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-lowstock">—</div><div class="stat-label">⚠ Low Stock</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="s-pending">—</div><div class="stat-label">⏳ Pending Invoices</div></div></div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card-v2" style="--accent-color:#2ed573">
+      <div class="stat-card-v2-top">
+        <span class="stat-card-v2-label">Today's Sales</span>
+        <div class="stat-icon-circle">💰</div>
+      </div>
+      <div class="stat-card-v2-val" id="s-today">—</div>
+      <div class="stat-card-v2-trend flat">TND <a href="/sales">view all →</a></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card-v2" style="--accent-color:#ffa502">
+      <div class="stat-card-v2-top">
+        <span class="stat-card-v2-label">Open Repairs</span>
+        <div class="stat-icon-circle">🔧</div>
+      </div>
+      <div class="stat-card-v2-val" id="s-repairs">—</div>
+      <div class="stat-card-v2-trend flat"><a href="/repairs">view all →</a></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card-v2" style="--accent-color:#ff4757">
+      <div class="stat-card-v2-top">
+        <span class="stat-card-v2-label">Low Stock Items</span>
+        <div class="stat-icon-circle">⚠️</div>
+      </div>
+      <div class="stat-card-v2-val" id="s-lowstock">—</div>
+      <div class="stat-card-v2-trend flat"><a href="/inventory">view items →</a></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card-v2" style="--accent-color:#a855f7">
+      <div class="stat-card-v2-top">
+        <span class="stat-card-v2-label">Pending Payments</span>
+        <div class="stat-icon-circle">⏳</div>
+      </div>
+      <div class="stat-card-v2-val" id="s-pending">—</div>
+      <div class="stat-card-v2-trend flat" id="s-pending-count"></div>
+    </div>
+  </div>
 </div>
 
 <!-- QUICK ACTIONS -->
@@ -80,19 +116,25 @@
 <!-- RECENT SALES / REPAIRS -->
 <div class="row g-4">
   <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🕐 Recent Sales</h6>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="fw-bold mb-0" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🕐 Today's Sales</h6>
+      <a href="/sales" class="small text-muted text-decoration-none">View all →</a>
+    </div>
     <div class="zmoto-card table-responsive">
       <table class="table table-hover mb-0">
-        <thead><tr><th>#</th><th>Customer</th><th>Total</th><th>Seller</th><th>Date</th></tr></thead>
+        <thead><tr><th>Invoice</th><th>Customer</th><th>Total</th><th>Payment</th><th>Time</th></tr></thead>
         <tbody id="tbl-sales"></tbody>
       </table>
     </div>
   </div>
   <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🔧 Recent Repairs</h6>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="fw-bold mb-0" style="font-family:'Barlow Condensed',sans-serif;letter-spacing:.5px">🔧 Today's Repairs</h6>
+      <a href="/repairs" class="small text-muted text-decoration-none">View all →</a>
+    </div>
     <div class="zmoto-card table-responsive">
       <table class="table table-hover mb-0">
-        <thead><tr><th>#</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Date</th></tr></thead>
+        <thead><tr><th>Ticket</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Time</th></tr></thead>
         <tbody id="tbl-repairs"></tbody>
       </table>
     </div>
@@ -102,20 +144,27 @@
 
 {% block extra_js %}
 <script>
+function payBadge(status) {
+  const cls = status === 'paid' ? 'pay-paid' : (status === 'partial' ? 'pay-partial' : 'pay-unpaid');
+  const label = status === 'paid' ? 'Paid' : (status === 'partial' ? 'Partial' : 'Unpaid');
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
 apiG('/api/dashboard').done(function(d) {
-  $('#s-today').text(fmt(d.sales_today));
+  $('#s-today').text(fmt(d.sales_today) + ' TND');
   $('#s-repairs').text(d.repairs_open);
   $('#s-lowstock').text(d.low_stock_count);
-  $('#s-pending').text(d.pending_invoices);
+  $('#s-pending').text(fmt(d.pending_balance) + ' TND');
+  $('#s-pending-count').text(d.pending_invoices + ' invoice(s)');
 
   const $rs = $('#tbl-sales').empty();
   d.recent_sales.length
-    ? d.recent_sales.forEach(r => $rs.append(`<tr><td>#${r.id}</td><td>${r.customer}</td><td>${fmt(r.total)} TND</td><td>${r.seller}</td><td>${(r.created_at||'').slice(0,10)}</td></tr>`))
+    ? d.recent_sales.forEach(r => $rs.append(`<tr><td>${r.invoice_number||'#'+r.id}</td><td>${r.customer}</td><td>${fmt(r.total)} TND</td><td>${payBadge(r.payment_status)}</td><td>${(r.created_at||'').slice(11,16)}</td></tr>`))
     : $rs.append('<tr><td colspan="5" class="text-center text-muted py-3">No sales yet</td></tr>');
 
   const $rr = $('#tbl-repairs').empty();
   d.recent_repairs.length
-    ? d.recent_repairs.forEach(r => $rr.append(`<tr><td>#${r.id}</td><td>${r.customer}</td><td>${r.vehicle||'—'}</td><td><span class="badge status-${r.status}">${r.status.replace('_',' ')}</span></td><td>${(r.created_at||'').slice(0,10)}</td></tr>`))
+    ? d.recent_repairs.forEach(r => $rr.append(`<tr><td>${r.invoice_number||'#'+r.id}</td><td>${r.customer}</td><td>${r.vehicle||'—'}</td><td><span class="badge status-${r.status}">${r.status.replace('_',' ')}</span></td><td>${(r.created_at||'').slice(11,16)}</td></tr>`))
     : $rr.append('<tr><td colspan="5" class="text-center text-muted py-3">No repairs yet</td></tr>');
 });
 </script>
