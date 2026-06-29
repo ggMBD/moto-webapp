@@ -1,274 +1,397 @@
 {% extends "base.html" %}
 {% set active = "repairs" %}
 {% block title %}Repairs{% endblock %}
-{% block page_title %}🔧 Repairs{% endblock %}
-
+{% block page_title %}<i class="bi bi-wrench-adjustable me-2 text-accent"></i>Repairs{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <div class="d-flex gap-2 align-items-center flex-wrap">
-    <input class="form-control form-control-sm" id="rep-search" placeholder="🔍 Search…" style="max-width:200px">
-    <select class="form-select form-select-sm" id="rep-status" style="max-width:160px">
-      <option value="">All Statuses</option>
-      <option value="pending">Pending</option>
-      <option value="in_progress">In Progress</option>
-      <option value="waiting_parts">Waiting Parts</option>
-      <option value="done">Done</option>
-      <option value="cancelled">Cancelled</option>
-    </select>
+<ul class="nav zmoto-tabs mb-3">
+  <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-repairs-list">Repairs List</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-new-repair">New Repair</a></li>
+</ul>
+<div class="tab-content">
+
+<!-- ── LIST ── -->
+<div class="tab-pane fade show active" id="tab-repairs-list">
+  <div class="zmoto-card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label">Status</label>
+        <select class="form-select form-select-sm" id="r-status-filter">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="in_progress">In Progress</option>
+          <option value="waiting_parts">Waiting Parts</option>
+          <option value="done">Done</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="col-md-3"><label class="form-label">From</label><input class="form-control form-control-sm" id="r-from" type="date"></div>
+      <div class="col-md-3"><label class="form-label">To</label><input class="form-control form-control-sm" id="r-to" type="date"></div>
+      <div class="col-md-2"><button class="btn btn-danger btn-sm w-100" id="btn-filter-repairs"><i class="bi bi-funnel me-1"></i>Filter</button></div>
+      <div class="col-auto ms-auto"><span class="text-muted-sm" id="repairs-count"></span></div>
+    </div>
   </div>
-  <div class="d-flex gap-2">
-    <button class="btn btn-danger btn-sm" id="btn-add">＋ New Repair</button>
-    <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
-    <button class="btn btn-outline-danger btn-sm" id="btn-delete">🗑 Delete</button>
+  <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Vehicle</th><th>Status</th><th>Total</th><th>Payment</th><th>Actions</th></tr></thead>
+      <tbody id="repairs-tbody"><tr><td colspan="8" class="text-center py-4 text-muted-sm"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Loading…</td></tr></tbody>
+    </table>
   </div>
 </div>
 
-<div class="zmoto-card table-responsive">
-  <table class="table table-hover mb-0">
-    <thead><tr><th>#</th><th>Customer</th><th>Bike</th><th>Description</th><th>Status</th><th>Labor</th><th>Parts</th><th>Total</th><th>Tech</th><th>Date</th><th></th></tr></thead>
-    <tbody id="tbl"></tbody>
-  </table>
+<!-- ── NEW REPAIR ── -->
+<div class="tab-pane fade" id="tab-new-repair">
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="zmoto-card p-3">
+        <div class="section-label">Repair Details</div>
+        <div class="mb-2">
+          <label class="form-label">Customer</label>
+          <div class="search-wrap">
+            <input class="form-control form-control-sm" id="r-cust-search" placeholder="Search customer…" autocomplete="off">
+            <div class="prod-search-list" id="r-cust-list" style="display:none"></div>
+          </div>
+          <div id="r-cust-selected" class="text-muted-sm mt-1" style="display:none">
+            <i class="bi bi-person-check text-accent me-1"></i><span id="r-cust-name"></span>
+            <button class="btn btn-link btn-sm text-danger p-0 ms-2" onclick="clearRCustomer()">✕</button>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Bike (optional)</label>
+          <select class="form-select form-select-sm" id="r-bike-select"><option value="">— Select bike —</option></select>
+        </div>
+        <div class="mb-2"><label class="form-label">Vehicle Description</label><input class="form-control form-control-sm" id="r-vehicle" placeholder="e.g. Yamaha YBR 125 — 123 TUN 4567"></div>
+        <div class="mb-2"><label class="form-label">Problem Description</label><textarea class="form-control form-control-sm" id="r-desc" rows="3" placeholder="Describe the issue…"></textarea></div>
+        <div class="mb-2"><label class="form-label">Status</label>
+          <select class="form-select form-select-sm" id="r-status-new">
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="waiting_parts">Waiting Parts</option>
+            <option value="done">Done</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="mb-2"><label class="form-label">Note</label><textarea class="form-control form-control-sm" id="r-note" rows="2"></textarea></div>
+        <button class="btn btn-danger w-100 mt-2" id="btn-create-repair"><i class="bi bi-plus-lg me-1"></i>Create Repair Job</button>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
-<!-- New/Edit Repair Modal -->
+<!-- ── REPAIR DETAIL MODAL ── -->
 <div class="modal fade" id="modalRepair" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="modal-title">New Repair</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title"><i class="bi bi-wrench-adjustable me-2"></i>Repair Job — <span id="rd-inv"></span></h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="hidden" id="rid">
-        <div class="row g-2 mb-2">
-          <div class="col-md-6">
-            <label class="form-label">Customer *</label>
-            <select class="form-select" id="r-customer"><option value="">— Select customer —</option></select>
+        <input type="hidden" id="rd-id">
+        <div class="row g-3">
+          <!-- Left: edit form -->
+          <div class="col-lg-5">
+            <div class="section-label">Info</div>
+            <div class="mb-2"><label class="form-label">Vehicle</label><input class="form-control form-control-sm" id="rd-vehicle"></div>
+            <div class="mb-2"><label class="form-label">Description</label><textarea class="form-control form-control-sm" id="rd-desc" rows="3"></textarea></div>
+            <div class="mb-2"><label class="form-label">Status</label>
+              <select class="form-select form-select-sm" id="rd-status">
+                <option value="pending">Pending</option><option value="in_progress">In Progress</option>
+                <option value="waiting_parts">Waiting Parts</option><option value="done">Done</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="mb-2"><label class="form-label">Discount (TND)</label><input class="form-control form-control-sm" id="rd-discount" type="number" min="0" step="0.001" value="0"></div>
+            <div class="mb-2"><label class="form-label">Payment Method</label>
+              <select class="form-select form-select-sm" id="rd-pay-method">
+                <option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option>
+                <option value="card">Card</option><option value="cheque">Cheque</option>
+              </select>
+            </div>
+            <div class="mb-2"><label class="form-label">Payment Status</label>
+              <select class="form-select form-select-sm" id="rd-pay-status">
+                <option value="unpaid">Unpaid</option><option value="partial">Partial</option><option value="paid">Paid</option>
+              </select>
+            </div>
+            <div class="mb-2" id="rd-paid-wrap" style="display:none">
+              <label class="form-label">Amount Paid (TND)</label>
+              <input class="form-control form-control-sm" id="rd-amount-paid" type="number" min="0" step="0.001" value="0">
+            </div>
+            <div class="mb-2"><label class="form-label">Note</label><textarea class="form-control form-control-sm" id="rd-note" rows="2"></textarea></div>
+            <button class="btn btn-danger btn-sm w-100 mt-1" id="btn-save-repair"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+            <div class="mt-2 p-2 zmoto-card text-center">
+              <div class="text-muted-sm">TOTAL</div>
+              <div class="cart-total-line" id="rd-total-display">0.000 TND</div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <label class="form-label d-flex justify-content-between">
-              <span>Bike</span>
-              <a href="/bikes" target="_blank" class="text-decoration-none small" style="text-transform:none;font-weight:400">＋ add new bike</a>
-            </label>
-            <select class="form-select" id="r-bike"><option value="">— Select customer first —</option></select>
-          </div>
-        </div>
-        <div class="mb-2"><label class="form-label">Description</label><textarea class="form-control" id="r-desc" rows="2" placeholder="Describe the issue…"></textarea></div>
-        <div class="row g-2 mb-2">
-          <div class="col-md-6"><label class="form-label">Status</label>
-            <select class="form-select" id="r-status">
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="waiting_parts">Waiting Parts</option>
-              <option value="done">Done</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div class="col-md-6"><label class="form-label">Labor Cost (TND)</label><input class="form-control" id="r-labor" type="number" step="0.01" value="0"></div>
-        </div>
-        <div class="mb-2"><label class="form-label">Note</label><input class="form-control" id="r-note"></div>
-
-        <!-- Parts section (only shown when editing) -->
-        <div id="parts-section" class="d-none">
-          <hr>
-          <h6 style="font-family:'Barlow Condensed',sans-serif;font-weight:700">🔩 Parts Used</h6>
-          <div class="row g-2 mb-2">
-            <div class="col-md-5"><input class="form-control form-control-sm" id="part-search" placeholder="Search part…"></div>
-            <div class="col-md-2"><input class="form-control form-control-sm" id="part-qty" type="number" value="1" min="1" placeholder="Qty"></div>
-            <div class="col-md-3"><input class="form-control form-control-sm" id="part-price" type="number" step="0.01" placeholder="Price (auto)"></div>
-            <div class="col-md-2"><button class="btn btn-danger btn-sm w-100" id="btn-add-part">Add</button></div>
-          </div>
-          <div class="prod-search-list mb-2" id="part-list"></div>
-          <div class="zmoto-card table-responsive">
-            <table class="table table-sm mb-0">
-              <thead><tr><th>Ref</th><th>Product</th><th>Qty</th><th>Price</th><th>Sub</th><th></th></tr></thead>
-              <tbody id="parts-tbl"></tbody>
-            </table>
+          <!-- Right: parts & labor -->
+          <div class="col-lg-7">
+            <!-- Add Part -->
+            <div class="section-label">Parts Used</div>
+            <div class="search-wrap mb-2">
+              <input class="form-control form-control-sm" id="rp-search" placeholder="Search part to add…" autocomplete="off">
+              <div class="prod-search-list" id="rp-list" style="display:none"></div>
+            </div>
+            <div class="table-responsive mb-3" style="max-height:200px;overflow-y:auto">
+              <table class="table table-sm mb-0">
+                <thead><tr><th>Part</th><th>Qty</th><th>Price</th><th>Sub</th><th></th></tr></thead>
+                <tbody id="rp-tbody"></tbody>
+              </table>
+            </div>
+            <!-- Add Labor -->
+            <div class="section-label">Labor</div>
+            <div class="row g-2 mb-2">
+              <div class="col-6"><input class="form-control form-control-sm" id="rl-desc" placeholder="Labor description"></div>
+              <div class="col-3"><input class="form-control form-control-sm" id="rl-price" type="number" min="0" step="0.001" placeholder="Price TND"></div>
+              <div class="col-3"><button class="btn btn-danger btn-sm w-100" id="btn-add-labor"><i class="bi bi-plus-lg"></i> Add</button></div>
+            </div>
+            <div class="table-responsive" style="max-height:200px;overflow-y:auto">
+              <table class="table table-sm mb-0">
+                <thead><tr><th>Description</th><th>Price</th><th></th></tr></thead>
+                <tbody id="rl-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
+        <button class="btn btn-outline-danger btn-sm" id="btn-del-repair"><i class="bi bi-trash me-1"></i>Delete</button>
+        <button class="btn btn-outline-secondary btn-sm" id="btn-repair-invoice"><i class="bi bi-file-earmark-pdf me-1"></i>Invoice PDF</button>
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice Edit Modal for Repairs -->
+<div class="modal fade" id="modalRepairInvoice" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title"><i class="bi bi-file-earmark-pdf me-2"></i>Invoice — Edit Before Print</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="alert alert-warning py-2" style="font-size:.82rem"><i class="bi bi-info-circle me-1"></i>PDF only — changes not saved.</div>
+        <div class="mb-2"><label class="form-label">Discount Override (TND)</label><input class="form-control" id="ri-discount" type="number" step="0.001" min="0"></div>
+        <div class="mb-2"><label class="form-label">Note / Remarks</label><textarea class="form-control" id="ri-note" rows="3"></textarea></div>
+      </div>
+      <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-danger btn-sm" id="btn-save">Save</button>
+        <button class="btn btn-danger btn-sm" id="btn-print-repair-invoice"><i class="bi bi-printer me-1"></i>Open PDF</button>
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
-let sel = null, selPart = null, editRepairId = null;
-const modal = new bootstrap.Modal('#modalRepair');
+let currentRepairId = null;
 
-function load() {
-  const q = encodeURIComponent($('#rep-search').val());
-  const s = encodeURIComponent($('#rep-status').val());
-  apiG(`/api/repairs?q=${q}&status=${s}`).done(function(rows) {
-    const $t = $('#tbl').empty();
-    if (!rows.length) { $t.append('<tr><td colspan="11" class="text-center text-muted py-4">No repairs found</td></tr>'); return; }
-    rows.forEach(r => {
-      const bikeLabel = r.bike_brand ? `${r.bike_brand} ${r.bike_model||''} ${r.bike_plate?'('+r.bike_plate+')':''}` : (r.vehicle || '—');
-      $(`<tr>
-        <td>#${r.id}</td><td>${r.customer_name}</td><td>${bikeLabel}</td>
-        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description||'—'}</td>
-        <td><span class="badge status-${r.status}">${r.status.replace(/_/g,' ')}</span></td>
-        <td>${fmt(r.labor_cost)}</td><td>${fmt(r.parts_cost)}</td>
-        <td><b>${fmt(r.total)}</b> TND</td>
-        <td>${r.technician}</td>
-        <td>${(r.created_at||'').slice(0,10)}</td>
-        <td><button class="btn btn-outline-secondary btn-sm" data-id="${r.id}">🔩 Parts</button></td>
-      </tr>`).on('click', function(e) {
-        if ($(e.target).is('button')) return;
-        $('#tbl tr').removeClass('table-active'); $(this).addClass('table-active'); sel=r;
-      }).find('button').on('click', function() {
-        openEdit(parseInt($(this).data('id')));
-      }).end().appendTo($t);
+// ── LOAD LIST ──
+function loadRepairs() {
+  const status = $('#r-status-filter').val();
+  const from   = $('#r-from').val(), to = $('#r-to').val();
+  let url = '/api/repairs?';
+  if (status) url += 'status='+status+'&';
+  if (from && to) url += `from_date=${from}&to_date=${to}`;
+  $.getJSON(url, data => {
+    $('#repairs-count').text(data.length + ' repairs');
+    if (!data.length) { $('#repairs-tbody').html('<tr><td colspan="8" class="text-center py-4 text-muted-sm">No repairs found</td></tr>'); return; }
+    $('#repairs-tbody').html(data.map(r => {
+      const bike = [r.bike_brand, r.bike_model].filter(Boolean).join(' ') || r.vehicle || '—';
+      return `<tr onclick="openRepair(${r.id})" style="cursor:pointer">
+        <td class="mono text-accent">${r.invoice_number||'—'}</td>
+        <td class="text-muted-sm">${(r.created_at||'').slice(0,16)}</td>
+        <td>${r.customer_name}</td>
+        <td>${bike}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td class="mono">${fmt2(r.total)} TND</td>
+        <td>${payBadge(r.payment_status)}</td>
+        <td><button class="btn btn-sm btn-outline-secondary py-0" onclick="event.stopPropagation();openRepair(${r.id})"><i class="bi bi-pencil"></i></button></td>
+      </tr>`;
+    }).join(''));
+  });
+}
+$('#btn-filter-repairs').on('click', loadRepairs);
+
+// ── NEW REPAIR ──
+let rCustomer = null;
+let custTimer2;
+$('#r-cust-search').on('input', function() {
+  clearTimeout(custTimer2);
+  const q = $(this).val().trim();
+  if (!q) { $('#r-cust-list').hide(); return; }
+  custTimer2 = setTimeout(() => {
+    $.getJSON('/api/customers?q='+encodeURIComponent(q), data => {
+      if (!data.length) { $('#r-cust-list').hide(); return; }
+      $('#r-cust-list').html(data.map(c =>
+        `<div class="psl-item" data-id="${c.id}" data-name="${c.name.replace(/"/g,'&quot;')}">
+          <span>${c.name}</span><span class="text-muted-sm">${c.phone||''}</span>
+        </div>`).join('')).show();
+    });
+  }, 250);
+});
+$(document).on('click', '#r-cust-list .psl-item', function() {
+  rCustomer = { id: +$(this).data('id'), name: $(this).data('name') };
+  $('#r-cust-search').val(''); $('#r-cust-list').hide();
+  $('#r-cust-name').text(rCustomer.name); $('#r-cust-selected').show();
+  // Load bikes for this customer
+  $.getJSON('/api/bikes?owner_id='+rCustomer.id, bikes => {
+    const opts = bikes.map(b => `<option value="${b.id}">${b.brand} ${b.model||''} ${b.plate?'— '+b.plate:''}</option>`).join('');
+    $('#r-bike-select').html('<option value="">— No specific bike —</option>' + opts);
+  });
+});
+function clearRCustomer() {
+  rCustomer = null; $('#r-cust-selected').hide(); $('#r-cust-search').val('');
+  $('#r-bike-select').html('<option value="">— Select bike —</option>');
+}
+
+$('#btn-create-repair').on('click', function() {
+  apiP('/api/repairs', {
+    customer_id: rCustomer?.id || null, bike_id: $('#r-bike-select').val() || null,
+    vehicle: $('#r-vehicle').val().trim(), description: $('#r-desc').val().trim(),
+    status: $('#r-status-new').val(), note: $('#r-note').val(),
+  }).done(res => {
+    toast('Repair job created! ' + res.invoice_number);
+    $('#r-vehicle,#r-desc,#r-note').val(''); clearRCustomer(); $('#r-status-new').val('pending');
+    $('[href="#tab-repairs-list"]').tab('show'); loadRepairs();
+    openRepair(res.id);
+  }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+
+// ── OPEN REPAIR DETAIL ──
+function openRepair(id) {
+  currentRepairId = id;
+  $.getJSON('/api/repairs/'+id, res => {
+    const r = res.repair;
+    $('#rd-id').val(r.id); $('#rd-inv').text(r.invoice_number||'—');
+    $('#rd-vehicle').val(r.vehicle); $('#rd-desc').val(r.description);
+    $('#rd-status').val(r.status); $('#rd-discount').val(r.discount||0);
+    $('#rd-pay-method').val(r.payment_method||'cash');
+    $('#rd-pay-status').val(r.payment_status||'unpaid');
+    $('#rd-amount-paid').val(r.amount_paid||0);
+    $('#rd-paid-wrap').toggle(r.payment_status==='partial');
+    $('#rd-note').val(r.note||'');
+    $('#rd-total-display').text(fmt2(r.total) + ' TND');
+    renderParts(res.parts); renderLabor(res.labor);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('#modalRepair')).show();
+  });
+}
+
+// ── PARTS ──
+function renderParts(parts) {
+  if (!parts.length) { $('#rp-tbody').html('<tr><td colspan="5" class="text-center text-muted-sm py-2">No parts added</td></tr>'); return; }
+  $('#rp-tbody').html(parts.map(p =>
+    `<tr><td>${p.product_name} <small class="text-muted-sm">${p.ref}</small></td>
+     <td>${p.qty}</td><td class="mono">${fmt2(p.unit_price)}</td>
+     <td class="mono">${fmt2(p.qty*p.unit_price)}</td>
+     <td><button class="btn btn-sm btn-outline-danger py-0" onclick="delPart(${p.id})"><i class="bi bi-x"></i></button></td></tr>`).join(''));
+}
+let rpTimer;
+$('#rp-search').on('input', function() {
+  clearTimeout(rpTimer);
+  const q = $(this).val().trim();
+  if (!q) { $('#rp-list').hide(); return; }
+  rpTimer = setTimeout(() => {
+    $.getJSON('/api/products?q='+encodeURIComponent(q), data => {
+      if (!data.length) { $('#rp-list').hide(); return; }
+      $('#rp-list').html(data.map(p =>
+        `<div class="psl-item ${p.qty<=0?'out-of-stock':''}" data-id="${p.id}" data-price="${p.sell_price}">
+          <span>${p.name}</span>
+          <span class="${p.qty<=0?'stock-zero':'stock-ok'}">${p.qty} — ${fmt2(p.sell_price)} TND</span>
+        </div>`).join('')).show();
+    });
+  }, 250);
+});
+$(document).on('click', '#rp-list .psl-item', function() {
+  if (!currentRepairId) return;
+  const pid = +$(this).data('id'), price = +$(this).data('price');
+  const qty = prompt('Quantity?', '1');
+  if (!qty) return;
+  apiP('/api/repairs/'+currentRepairId+'/parts', { product_id: pid, qty: parseInt(qty), unit_price: price })
+    .done(() => { $('#rp-search').val(''); $('#rp-list').hide(); refreshRepairTotals(); })
+    .fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+function delPart(pid) {
+  apiD('/api/repairs/'+currentRepairId+'/parts/'+pid)
+    .done(() => refreshRepairTotals())
+    .fail(r => toast(r.responseJSON?.error||'Error','error'));
+}
+
+// ── LABOR ──
+function renderLabor(labor) {
+  if (!labor.length) { $('#rl-tbody').html('<tr><td colspan="3" class="text-center text-muted-sm py-2">No labor added</td></tr>'); return; }
+  $('#rl-tbody').html(labor.map(l =>
+    `<tr><td>${l.description}</td><td class="mono">${fmt2(l.price)} TND</td>
+     <td><button class="btn btn-sm btn-outline-danger py-0" onclick="delLabor(${l.id})"><i class="bi bi-x"></i></button></td></tr>`).join(''));
+}
+$('#btn-add-labor').on('click', () => {
+  if (!currentRepairId) return;
+  const desc = $('#rl-desc').val().trim(), price = parseFloat($('#rl-price').val()||0);
+  if (!desc || price <= 0) { toast('Enter description and price','error'); return; }
+  apiP('/api/repairs/'+currentRepairId+'/labor', { description: desc, price })
+    .done(() => { $('#rl-desc,#rl-price').val(''); refreshRepairTotals(); })
+    .fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+function delLabor(lid) {
+  apiD('/api/repairs/'+currentRepairId+'/labor/'+lid)
+    .done(() => refreshRepairTotals())
+    .fail(r => toast(r.responseJSON?.error||'Error','error'));
+}
+
+function refreshRepairTotals() {
+  $.getJSON('/api/repairs/'+currentRepairId, res => {
+    renderParts(res.parts); renderLabor(res.labor);
+    $('#rd-total-display').text(fmt2(res.repair.total) + ' TND');
+  });
+}
+
+// ── SAVE REPAIR ──
+$('#rd-pay-status').on('change', function() { $('#rd-paid-wrap').toggle($(this).val()==='partial'); });
+$('#btn-save-repair').on('click', () => {
+  const id = $('#rd-id').val();
+  apiU('/api/repairs/'+id, {
+    vehicle: $('#rd-vehicle').val(), description: $('#rd-desc').val(),
+    status: $('#rd-status').val(), discount: parseFloat($('#rd-discount').val()||0),
+    labor_cost: 0, payment_method: $('#rd-pay-method').val(),
+    payment_status: $('#rd-pay-status').val(),
+    amount_paid: parseFloat($('#rd-amount-paid').val()||0),
+    note: $('#rd-note').val(),
+  }).done(res => {
+    toast('Repair saved!'); $('#rd-total-display').text(fmt2(res.total)+' TND');
+    loadRepairs();
+  }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+
+// ── DELETE REPAIR ──
+$('#btn-del-repair').on('click', () => {
+  confirm_action('Delete this repair job? Parts will be returned to stock.', () => {
+    apiD('/api/repairs/'+currentRepairId).done(() => {
+      bootstrap.Modal.getInstance('#modalRepair')?.hide();
+      toast('Repair deleted'); loadRepairs();
     });
   });
-}
-
-function loadCustomersIntoSelect() {
-  return apiG('/api/customers').done(function(custs) {
-    const $s = $('#r-customer').empty().append('<option value="">— Select customer —</option>');
-    custs.forEach(c => $s.append(`<option value="${c.id}">${c.name} — ${c.phone||''}</option>`));
-  });
-}
-
-function loadBikesForCustomer(customerId, selectedBikeId) {
-  const $b = $('#r-bike').empty();
-  if (!customerId) { $b.append('<option value="">— Select customer first —</option>'); return; }
-  $b.append('<option value="">— No bike / not specified —</option>');
-  apiG('/api/bikes?owner_id='+customerId).done(function(bikes) {
-    if (!bikes.length) {
-      $b.append('<option disabled>No bikes for this customer — add one</option>');
-    }
-    bikes.forEach(bk => {
-      $b.append(`<option value="${bk.id}">${bk.brand} ${bk.model||''} ${bk.plate?'('+bk.plate+')':''}</option>`);
-    });
-    if (selectedBikeId) $b.val(selectedBikeId);
-  });
-}
-
-$('#r-customer').on('change', function() {
-  loadBikesForCustomer($(this).val(), null);
 });
 
-function openAdd() {
-  editRepairId = null;
-  $('#modal-title').text('New Repair');
-  $('#rid').val(''); $('#r-desc').val('');
-  $('#r-status').val('pending'); $('#r-labor').val(0); $('#r-note').val('');
-  $('#parts-section').addClass('d-none');
-  loadCustomersIntoSelect().done(() => {
-    $('#r-customer').val('');
-    loadBikesForCustomer(null, null);
-    modal.show();
-  });
-}
-
-function openEdit(id) {
-  editRepairId = id;
-  apiG(`/api/repairs/${id}`).done(function(data) {
-    const r = data.repair;
-    $('#modal-title').text('Edit Repair #'+id);
-    $('#rid').val(r.id); $('#r-desc').val(r.description);
-    $('#r-status').val(r.status); $('#r-labor').val(r.labor_cost); $('#r-note').val(r.note);
-    $('#parts-section').removeClass('d-none');
-    loadCustomersIntoSelect().done(() => {
-      $('#r-customer').val(r.customer_id||'');
-      loadBikesForCustomer(r.customer_id, r.bike_id);
-    });
-    renderPartsTable(data.parts);
-    modal.show();
-  });
-}
-
-function renderPartsTable(parts) {
-  const $t = $('#parts-tbl').empty();
-  if (!parts.length) { $t.append('<tr><td colspan="6" class="text-center text-muted py-2">No parts added</td></tr>'); return; }
-  parts.forEach(p => {
-    $(`<tr>
-      <td>${p.ref}</td><td>${p.product_name}</td><td>${p.qty}</td>
-      <td>${fmt(p.unit_price)}</td><td>${fmt(p.qty*p.unit_price)}</td>
-      <td><button class="btn btn-outline-danger btn-sm" data-partid="${p.id}">×</button></td>
-    </tr>`).find('button').on('click', function() {
-      apiD(`/api/repairs/${editRepairId}/parts/${$(this).data('partid')}`)
-        .done(() => { toast('Part removed'); apiG(`/api/repairs/${editRepairId}`).done(d => renderPartsTable(d.parts)); });
-    }).end().appendTo($t);
-  });
-}
-
-$('#part-search').on('input', function() {
-  const q = $(this).val().toLowerCase();
-  const $l = $('#part-list').empty();
-  if (!q) return;
-  apiG('/api/products?q='+encodeURIComponent(q)).done(function(rows) {
-    rows.slice(0,8).forEach(p => {
-      $(`<div class="psl-item ${p.qty<=0?'out':''}">
-        <span><b>${p.ref}</b> ${p.name}</span>
-        <span class="text-muted">${fmt(p.sell_price)} TND ×${p.qty}</span>
-      </div>`).on('click', function() {
-        selPart = p;
-        $('#part-search').val(p.ref+' — '+p.name);
-        $('#part-price').val(p.sell_price);
-        $l.empty();
-      }).appendTo($l);
-    });
+// ── INVOICE ──
+$('#btn-repair-invoice').on('click', () => {
+  const r = currentRepairId;
+  $.getJSON('/api/repairs/'+r, res => {
+    $('#ri-discount').val(res.repair.discount||0);
+    $('#ri-note').val(res.repair.note||'');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('#modalRepairInvoice')).show();
   });
 });
-
-$('#btn-add-part').on('click', function() {
-  if (!selPart) { toast('Select a part first','error'); return; }
-  if (!editRepairId) { toast('Save the repair first','error'); return; }
-  const qty   = parseInt($('#part-qty').val())||1;
-  const price = parseFloat($('#part-price').val())||selPart.sell_price;
-  apiP(`/api/repairs/${editRepairId}/parts`, {product_id:selPart.id, qty, unit_price:price})
-    .done(() => {
-      selPart=null; $('#part-search').val(''); $('#part-qty').val(1); $('#part-price').val('');
-      toast('Part added');
-      apiG(`/api/repairs/${editRepairId}`).done(d => renderPartsTable(d.parts));
-    }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+$('#btn-print-repair-invoice').on('click', () => {
+  const disc = $('#ri-discount').val();
+  const note = encodeURIComponent($('#ri-note').val());
+  window.open(`/api/repairs/${currentRepairId}/invoice.pdf?discount=${disc}&note=${note}`, '_blank');
+  bootstrap.Modal.getInstance('#modalRepairInvoice')?.hide();
 });
 
-$('#btn-save').on('click', function() {
-  const id   = $('#rid').val();
-  const body = {
-    customer_id: $('#r-customer').val()||null,
-    bike_id: $('#r-bike').val()||null,
-    description: $('#r-desc').val().trim(),
-    status: $('#r-status').val(),
-    labor_cost: parseFloat($('#r-labor').val())||0,
-    note: $('#r-note').val()
-  };
-  if (!body.customer_id) { toast('Customer is required','error'); return; }
-  if (id) {
-    apiU('/api/repairs/'+id, body).done(() => { modal.hide(); toast('Repair updated!'); load(); });
-  } else {
-    apiP('/api/repairs', body).done(res => {
-      editRepairId = res.id; $('#rid').val(res.id);
-      $('#modal-title').text('Edit Repair #'+res.id);
-      $('#parts-section').removeClass('d-none');
-      toast('Repair created! Now add parts.');
-      load();
-    }).fail(r => toast(r.responseJSON?.error||'Error','error'));
-  }
+$(document).on('click', e => {
+  if (!$(e.target).closest('.search-wrap').length) $('#rp-list,#r-cust-list').hide();
 });
 
-$('#btn-add').on('click', openAdd);
-$('#btn-edit').on('click', () => { if (!sel) { toast('Select a repair','error'); return; } openEdit(sel.id); });
-$('#btn-delete').on('click', function() {
-  if (!sel) { toast('Select a repair','error'); return; }
-  if (!confirm('Delete repair #'+sel.id+'? Parts will be returned to stock.')) return;
-  apiD('/api/repairs/'+sel.id).done(() => { sel=null; toast('Deleted'); load(); });
-});
-$('#rep-search, #rep-status').on('input change', load);
-
-load();
-
-// Auto-open Add modal when arriving from dashboard quick action
-if (new URLSearchParams(window.location.search).get('action') === 'add') {
-  setTimeout(() => openAdd(), 150);
-}
+const today = new Date().toISOString().slice(0,10);
+$('#r-to').val(today);
+loadRepairs();
 </script>
 {% endblock %}

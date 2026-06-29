@@ -3,115 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <title>{% block title %}Z-MOTO{% endblock %} — Z-MOTO Manager</title>
-
-<!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-
-<!-- Bootstrap 5.3 -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<!-- Z-MOTO Custom CSS (single file) -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-
 {% block extra_head %}{% endblock %}
 </head>
 <body>
 <div id="app">
-
-  <!-- SIDEBAR OVERLAY (mobile) -->
   <div id="sidebar-overlay"></div>
 
-  <!-- ══ SIDEBAR ══ -->
   <div id="sidebar">
     <div class="logo-wrap">
-      <div style="font-size:2rem">🏍</div>
-      <div class="logo-name">Z-MOTO</div>
-      <div class="logo-sub">Manager</div>
+      <div class="logo-icon">🏍</div>
+      <div>
+        <div class="logo-name">Z-MOTO</div>
+        <div class="logo-sub">Manager v5</div>
+      </div>
     </div>
     <nav class="sidebar-nav">
-      <a href="/dashboard"  class="nav-link-item {% if active=='dashboard'  %}active{% endif %}"><span class="nav-icon">🏠</span> Dashboard</a>
-      <a href="/inventory"  class="nav-link-item {% if active=='inventory'  %}active{% endif %}"><span class="nav-icon">📦</span> Inventory</a>
-      <a href="/sales"      class="nav-link-item {% if active=='sales'      %}active{% endif %}"><span class="nav-icon">💰</span> Sales</a>
-      <a href="/repairs"    class="nav-link-item {% if active=='repairs'    %}active{% endif %}"><span class="nav-icon">🔧</span> Repairs</a>
-      <a href="/purchases"  class="nav-link-item {% if active=='purchases'  %}active{% endif %}"><span class="nav-icon">🛒</span> Purchases</a>
-      <a href="/customers"  class="nav-link-item {% if active=='customers'  %}active{% endif %}"><span class="nav-icon">👤</span> Customers</a>
-      <a href="/bikes"      class="nav-link-item {% if active=='bikes'      %}active{% endif %}"><span class="nav-icon">🏍</span> Bikes</a>
-      <a href="/suppliers"  class="nav-link-item {% if active=='suppliers'  %}active{% endif %}"><span class="nav-icon">🏭</span> Suppliers</a>
-      <a href="/reports"    class="nav-link-item {% if active=='reports'    %}active{% endif %}"><span class="nav-icon">📊</span> Reports</a>
-      <span class="nav-link-item admin-nav" id="nav-users" style="display:none">
-        <a href="/users"    class="nav-link-item {% if active=='users'      %}active{% endif %}" style="padding:0;border:none;background:none"><span class="nav-icon">🔑</span> Users</a>
-      </span>
+      <div class="nav-group-label">Operations</div>
+      <a href="/dashboard" class="nav-link-item {% if active=='dashboard' %}active{% endif %}"><i class="bi bi-speedometer2 nav-icon"></i> Dashboard</a>
+      <a href="/inventory" class="nav-link-item {% if active=='inventory' %}active{% endif %}" data-perm="inventory"><i class="bi bi-boxes nav-icon"></i> Inventory</a>
+      <a href="/sales"     class="nav-link-item {% if active=='sales'     %}active{% endif %}" data-perm="sales"><i class="bi bi-cash-stack nav-icon"></i> Sales</a>
+      <a href="/repairs"   class="nav-link-item {% if active=='repairs'   %}active{% endif %}" data-perm="repairs"><i class="bi bi-wrench-adjustable nav-icon"></i> Repairs</a>
+      <a href="/purchases" class="nav-link-item {% if active=='purchases' %}active{% endif %}" data-perm="purchases"><i class="bi bi-cart-plus nav-icon"></i> Purchases</a>
+      <div class="nav-group-label mt-2">Management</div>
+      <a href="/customers" class="nav-link-item {% if active=='customers' %}active{% endif %}" data-perm="customers"><i class="bi bi-people nav-icon"></i> Customers</a>
+      <a href="/bikes"     class="nav-link-item {% if active=='bikes'     %}active{% endif %}" data-perm="bikes"><i class="bi bi-bicycle nav-icon"></i> Bikes</a>
+      <a href="/suppliers" class="nav-link-item {% if active=='suppliers' %}active{% endif %}" data-perm="suppliers"><i class="bi bi-building nav-icon"></i> Suppliers</a>
+      <div class="nav-group-label mt-2 admin-nav" style="display:none">Admin</div>
+      <a href="/reports"   class="nav-link-item {% if active=='reports'   %}active{% endif %} admin-nav" style="display:none"><i class="bi bi-bar-chart-line nav-icon"></i> Reports</a>
+      <a href="/users"     class="nav-link-item {% if active=='users'     %}active{% endif %} admin-nav" style="display:none"><i class="bi bi-shield-lock nav-icon"></i> Users</a>
     </nav>
-    <div class="sidebar-footer">v4.0 — Z-MOTO</div>
+    <div class="sidebar-footer">Z-MOTO Manager v5.0</div>
   </div>
 
-  <!-- ══ MAIN ══ -->
   <div id="main">
-
-    <!-- TOPBAR -->
     <div class="topbar">
       <div class="d-flex align-items-center gap-2">
-        <button class="hamburger" id="hamburger">☰</button>
+        <button class="hamburger" id="hamburger"><i class="bi bi-list"></i></button>
         <div class="topbar-title">{% block page_title %}{% endblock %}</div>
       </div>
       <div class="d-flex align-items-center gap-2">
         <div class="topbar-date d-none d-md-block" id="topbar-date"></div>
-        <button class="theme-btn" id="theme-btn">☀️ Light</button>
+        <button class="theme-btn" id="theme-btn"><i class="bi bi-sun"></i> Light</button>
         <div class="user-pill" id="user-pill">
           <div class="user-avatar" id="user-avatar">?</div>
           <span class="user-name" id="user-name">…</span>
           <span class="role-badge" id="role-badge">—</span>
           <div class="user-dropdown" id="user-dropdown">
-            <div class="dd-item" id="dd-change-pw">🔐 Change Password</div>
+            <div class="dd-item" id="dd-change-pw"><i class="bi bi-key"></i> Change Password</div>
             <div class="dd-sep"></div>
-            <div class="dd-item danger" id="dd-logout">🚪 Sign Out</div>
+            <div class="dd-item danger" id="dd-logout"><i class="bi bi-box-arrow-right"></i> Sign Out</div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- PAGE BODY -->
     <div class="page-body">
       {% block content %}{% endblock %}
     </div>
-
-  </div><!-- /main -->
-</div><!-- /app -->
+  </div>
+</div>
 
 <!-- Change Password Modal -->
 <div class="modal fade" id="modalChangePw" tabindex="-1">
   <div class="modal-dialog modal-sm">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">🔐 Change Password</h5>
+        <h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div class="mb-3"><label class="form-label">New Password</label><input class="form-control" id="new-pw" type="password"></div>
-        <div class="mb-3"><label class="form-label">Confirm</label><input class="form-control" id="confirm-pw" type="password"></div>
+        <div class="mb-3"><label class="form-label">Confirm Password</label><input class="form-control" id="confirm-pw" type="password"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-danger btn-sm" id="btn-save-pw">Update</button>
+        <button class="btn btn-danger btn-sm" id="btn-save-pw">Update Password</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Toast container -->
 <div id="toast-container"></div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
 <script>
-// ── GLOBAL HELPERS ──────────────────────────────────────────
-const fmt  = n => parseFloat(n||0).toFixed(2);
+// ── GLOBAL HELPERS ───────────────────────────────────────────
+const fmt  = n => parseFloat(n||0).toFixed(3);
+const fmt2 = n => parseFloat(n||0).toFixed(2);
 const apiG = url     => $.getJSON(url);
 const apiP = (url,d) => $.ajax({url, method:'POST',   contentType:'application/json', data:JSON.stringify(d)});
 const apiU = (url,d) => $.ajax({url, method:'PUT',    contentType:'application/json', data:JSON.stringify(d)});
@@ -122,40 +106,62 @@ function toast(msg, type='success') {
   if (_toastTimer) clearTimeout(_toastTimer);
   const $c = $('#toast-container');
   $c.find('.zmoto-toast').removeClass('show');
-  const $t = $(`<div class="zmoto-toast ${type}">${type==='success'?'✅':'❌'} ${msg}</div>`).appendTo($c);
+  const icon = type==='success' ? '<i class="bi bi-check-circle-fill"></i>' : '<i class="bi bi-x-circle-fill"></i>';
+  const $t = $(`<div class="zmoto-toast ${type}">${icon} ${msg}</div>`).appendTo($c);
   setTimeout(() => $t.addClass('show'), 10);
   _toastTimer = setTimeout(() => { $t.removeClass('show'); setTimeout(() => $t.remove(), 400); }, 3500);
 }
 
-// ── THEME ───────────────────────────────────────────────────
+function confirm_action(msg, cb) {
+  if (confirm(msg)) cb();
+}
+
+function payBadge(status) {
+  const map = {paid:'<span class="badge pay-paid">Paid</span>', partial:'<span class="badge pay-partial">Partial</span>', unpaid:'<span class="badge pay-unpaid">Unpaid</span>'};
+  return map[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+function statusBadge(s) {
+  const map = {pending:'<span class="badge status-pending">Pending</span>',in_progress:'<span class="badge status-in_progress">In Progress</span>',waiting_parts:'<span class="badge status-waiting_parts">Waiting Parts</span>',done:'<span class="badge status-done">Done</span>',cancelled:'<span class="badge status-cancelled">Cancelled</span>'};
+  return map[s] || `<span class="badge bg-secondary">${s}</span>`;
+}
+
+// ── THEME ────────────────────────────────────────────────────
 const savedTheme = localStorage.getItem('zmoto-theme') || 'dark';
 applyTheme(savedTheme);
 function applyTheme(t) {
   $('html').attr('data-theme', t);
-  $('#theme-btn').text(t==='dark' ? '☀️ Light' : '🌙 Dark');
+  $('#theme-btn').html(t==='dark' ? '<i class="bi bi-sun"></i> Light' : '<i class="bi bi-moon"></i> Dark');
   localStorage.setItem('zmoto-theme', t);
 }
 $('#theme-btn').on('click', () => applyTheme($('html').attr('data-theme')==='dark' ? 'light' : 'dark'));
 
-// ── MOBILE SIDEBAR ──────────────────────────────────────────
+// ── MOBILE SIDEBAR ───────────────────────────────────────────
 $('#hamburger').on('click', () => { $('#sidebar').addClass('open'); $('#sidebar-overlay').addClass('open'); });
 $('#sidebar-overlay').on('click', () => { $('#sidebar').removeClass('open'); $('#sidebar-overlay').removeClass('open'); });
 
-// ── TOPBAR DATE ─────────────────────────────────────────────
+// ── TOPBAR DATE ──────────────────────────────────────────────
 $('#topbar-date').text(new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
 
-// ── USER SESSION ────────────────────────────────────────────
+// ── USER SESSION ─────────────────────────────────────────────
 let currentUser = null;
 apiG('/api/auth/me').done(function(me) {
   if (!me.logged_in) { window.location.href = '/login'; return; }
   currentUser = me;
-  $('#user-avatar').text((me.full_name||me.username).slice(0,2).toUpperCase());
+  const initials = (me.full_name||me.username).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  $('#user-avatar').text(initials);
   $('#user-name').text(me.full_name||me.username);
-  $('#role-badge').text(me.role);
+  $('#role-badge').text(me.role.toUpperCase());
   if (me.role === 'admin') {
-    $('.admin-nav, #nav-users').show();
+    $('.admin-nav').show();
   }
-});
+  // Hide nav items staff has no permission for
+  if (me.role !== 'admin' && me.permissions) {
+    $('[data-perm]').each(function() {
+      const perm = $(this).data('perm');
+      if (!me.permissions[perm]) $(this).hide();
+    });
+  }
+}).fail(() => { window.location.href = '/login'; });
 
 $('#user-pill').on('click', e => { e.stopPropagation(); $('#user-dropdown').toggleClass('open'); });
 $(document).on('click', () => $('#user-dropdown').removeClass('open'));

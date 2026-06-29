@@ -1,5 +1,5 @@
 """
-Z-MOTO Manager v4.0
+Z-MOTO Manager v5.0
 Entry point — registers all blueprints
 Run: python app.py
 """
@@ -45,4 +45,4 @@ def not_found(e):
 if __name__ == "__main__":
     init_db()
     print("\n  🏍  Z-MOTO Manager v4 — http://localhost:5000\n")
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=5000)

@@ -12,15 +12,14 @@ def page():
 @bikes_bp.route("/api/bikes", methods=["GET"])
 @login_required
 def get_bikes():
-    q          = f"%{request.args.get('q','')}%"
-    owner_id   = request.args.get("owner_id")
+    q        = f"%{request.args.get('q','')}%"
+    owner_id = request.args.get("owner_id")
     with get_db() as c:
         if owner_id:
             data = rows(c.execute("""
                 SELECT b.*, cu.name as owner_name, cu.phone as owner_phone
                 FROM bikes b JOIN customers cu ON b.owner_id = cu.id
-                WHERE b.owner_id = ?
-                ORDER BY b.id DESC""", (owner_id,)).fetchall())
+                WHERE b.owner_id = ? ORDER BY b.id DESC""", (owner_id,)).fetchall())
         else:
             data = rows(c.execute("""
                 SELECT b.*, cu.name as owner_name, cu.phone as owner_phone
@@ -39,9 +38,8 @@ def get_bike(bid):
             WHERE b.id=?""", (bid,)).fetchone()
         if not bike:
             return jsonify({"error": "Not found"}), 404
-        history = rows(c.execute("""
-            SELECT id, description, status, total, created_at
-            FROM repairs WHERE bike_id=? ORDER BY id DESC""", (bid,)).fetchall())
+        history = rows(c.execute(
+            "SELECT id, description, status, total, created_at FROM repairs WHERE bike_id=? ORDER BY id DESC", (bid,)).fetchall())
     return jsonify({"bike": dict(bike), "repairs": history})
 
 @bikes_bp.route("/api/bikes", methods=["POST"])
@@ -70,28 +68,12 @@ def update_bike(bid):
         c.execute("""UPDATE bikes SET
                      owner_id=:owner_id, brand=:brand, model=:model, year=:year,
                      plate=:plate, vin=:vin, color=:color, mileage=:mileage, note=:note,
-                     updated_at=date('now')
-                     WHERE id=:id""", {
+                     updated_at=date('now') WHERE id=:id""", {
             "id": bid, "owner_id": d["owner_id"], "brand": d.get("brand",""),
             "model": d.get("model",""), "year": d.get("year") or None,
             "plate": d.get("plate",""), "vin": d.get("vin",""), "color": d.get("color",""),
             "mileage": d.get("mileage") or 0, "note": d.get("note",""),
         })
-    return jsonify({"ok": True})
-
-@bikes_bp.route("/api/bikes/<int:bid>/transfer", methods=["PUT"])
-@login_required
-def transfer_bike(bid):
-    """Change a bike's owner — dedicated endpoint for clarity in the audit trail."""
-    d = request.json
-    new_owner_id = d.get("owner_id")
-    if not new_owner_id:
-        return jsonify({"error": "owner_id is required"}), 400
-    with get_db() as c:
-        owner_exists = c.execute("SELECT 1 FROM customers WHERE id=?", (new_owner_id,)).fetchone()
-        if not owner_exists:
-            return jsonify({"error": "New owner not found"}), 404
-        c.execute("UPDATE bikes SET owner_id=?, updated_at=date('now') WHERE id=?", (new_owner_id, bid))
     return jsonify({"ok": True})
 
 @bikes_bp.route("/api/bikes/<int:bid>", methods=["DELETE"])

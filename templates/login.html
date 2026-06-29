@@ -2,73 +2,65 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Z-MOTO — Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Z-MOTO Manager</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-<style>
-body { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:20px; }
-.login-card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:40px 36px 32px; width:100%; max-width:400px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
-.logo-icon { font-size:3rem; }
-.logo-name { font-family:'Barlow Condensed',sans-serif; font-size:2.2rem; font-weight:800; letter-spacing:3px; color:#ff4757; }
-.logo-sub  { font-size:.65rem; color:var(--sub); letter-spacing:5px; text-transform:uppercase; }
-.theme-btn-fixed { position:fixed; top:14px; right:14px; }
-</style>
 </head>
-<body>
-<button class="theme-btn theme-btn-fixed" id="theme-btn">☀️ Light</button>
-
-<div class="login-card">
-  <div class="text-center mb-4">
-    <div class="logo-icon">🏍</div>
-    <div class="logo-name">Z-MOTO</div>
-    <div class="logo-sub">Shop Manager</div>
+<body class="login-body">
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-moto-icon">🏍</div>
+      <div class="login-brand">Z-MOTO</div>
+      <div class="login-sub">Manager v5.0</div>
+    </div>
+    <div id="login-error" class="alert alert-danger d-none py-2" role="alert"></div>
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-person"></i></span>
+        <input class="form-control" id="l-user" type="text" placeholder="Enter username" autocomplete="username">
+      </div>
+    </div>
+    <div class="mb-4">
+      <label class="form-label">Password</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+        <input class="form-control" id="l-pass" type="password" placeholder="Enter password" autocomplete="current-password">
+      </div>
+    </div>
+    <button class="btn btn-danger w-100 btn-lg" id="btn-login">
+      <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+    </button>
+    <div class="login-footer">Z-MOTO Parts & Repairs Management</div>
   </div>
-  <div class="alert alert-danger d-none" id="err-msg"></div>
-  <div class="mb-3">
-    <label class="form-label">Username</label>
-    <input class="form-control" id="username" type="text" placeholder="Enter username" autocapitalize="none" autocomplete="username">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Password</label>
-    <input class="form-control" id="password" type="password" placeholder="Enter password" autocomplete="current-password">
-  </div>
-  <button class="btn btn-danger w-100 fw-bold" id="btn-login" style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;letter-spacing:1px;">SIGN IN →</button>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
-  const t = localStorage.getItem('zmoto-theme')||'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const tb = document.getElementById('theme-btn');
-  tb.textContent = t==='dark' ? '☀️ Light' : '🌙 Dark';
-  tb.addEventListener('click', () => {
-    const n = document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', n);
-    localStorage.setItem('zmoto-theme', n);
-    tb.textContent = n==='dark' ? '☀️ Light' : '🌙 Dark';
-  });
+const savedTheme = localStorage.getItem('zmoto-theme') || 'dark';
+$('html').attr('data-theme', savedTheme);
 
-  async function login() {
-    const u = document.getElementById('username').value.trim();
-    const p = document.getElementById('password').value;
-    const err = document.getElementById('err-msg');
-    err.classList.add('d-none');
-    if (!u||!p) { err.textContent='Please fill in all fields.'; err.classList.remove('d-none'); return; }
-    const btn = document.getElementById('btn-login');
-    btn.textContent='Signing in…'; btn.disabled=true;
-    try {
-      const r = await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
-      const d = await r.json();
-      if (!r.ok) { err.textContent=d.error||'Login failed'; err.classList.remove('d-none'); btn.textContent='SIGN IN →'; btn.disabled=false; return; }
-      window.location.href='/dashboard';
-    } catch(e) { err.textContent='Connection error.'; err.classList.remove('d-none'); btn.textContent='SIGN IN →'; btn.disabled=false; }
-  }
-  document.getElementById('btn-login').addEventListener('click', login);
-  document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
-  document.getElementById('username').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('password').focus(); });
+function doLogin() {
+  const u=$('#l-user').val().trim(), p=$('#l-pass').val();
+  if (!u||!p) { showErr('Please enter username and password'); return; }
+  $('#btn-login').prop('disabled',true).html('<span class="spinner-border spinner-border-sm me-2"></span>Signing in…');
+  $.ajax({url:'/api/auth/login',method:'POST',contentType:'application/json',data:JSON.stringify({username:u,password:p})})
+    .done(() => window.location.href='/dashboard')
+    .fail(r => {
+      showErr((r.responseJSON?.error) || 'Login failed');
+      $('#btn-login').prop('disabled',false).html('<i class="bi bi-box-arrow-in-right me-2"></i>Sign In');
+    });
+}
+function showErr(msg) {
+  $('#login-error').text(msg).removeClass('d-none');
+}
+$('#btn-login').on('click', doLogin);
+$('#l-user,#l-pass').on('keydown', e => { if(e.key==='Enter') doLogin(); });
 </script>
 </body>
 </html>

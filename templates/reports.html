@@ -1,189 +1,180 @@
 {% extends "base.html" %}
 {% set active = "reports" %}
 {% block title %}Reports{% endblock %}
-{% block page_title %}📊 Reports{% endblock %}
-
+{% block page_title %}<i class="bi bi-bar-chart-line me-2 text-accent"></i>Reports{% endblock %}
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
-
 {% block content %}
-<!-- DATE RANGE FILTER -->
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <span class="text-muted small" id="range-label">Showing: this month</span>
-  <div class="d-flex flex-wrap gap-2 align-items-center">
-    <input type="date" class="form-control form-control-sm" id="from-date" style="width:140px">
-    <span class="text-muted small">→</span>
-    <input type="date" class="form-control form-control-sm" id="to-date" style="width:140px">
-    <button class="btn btn-danger btn-sm" id="btn-filter">🔍 Apply</button>
-    <div class="btn-group btn-group-sm">
-      <button class="btn btn-outline-secondary" data-range="7">7d</button>
-      <button class="btn btn-outline-secondary" data-range="30">30d</button>
-      <button class="btn btn-outline-secondary" data-range="90">90d</button>
-      <button class="btn btn-outline-secondary" id="btn-thismonth">This Month</button>
-    </div>
-    <button class="btn btn-secondary btn-sm" id="btn-alltime">All time</button>
+<div class="page-header">
+  <h1>Reports & Analytics</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <input class="form-control form-control-sm" id="rp-from" type="date" style="width:150px">
+    <input class="form-control form-control-sm" id="rp-to" type="date" style="width:150px">
+    <button class="btn btn-danger btn-sm" id="btn-rp-filter"><i class="bi bi-funnel me-1"></i>Filter</button>
+    <button class="btn btn-outline-secondary btn-sm" id="btn-rp-all">All Time</button>
   </div>
 </div>
 
-<!-- OVERVIEW STATS -->
+<!-- KPI Row -->
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#3742fa"><div class="stat-val" id="r-sales">—</div><div class="stat-label">Total Sales</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="r-rev">—</div><div class="stat-label">Revenue (TND)</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#a855f7"><div class="stat-val" id="r-profit">—</div><div class="stat-label">💵 Gross Profit (TND)</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#00b8d9"><div class="stat-val" id="r-avg">—</div><div class="stat-label">Avg Sale (TND)</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ffa502"><div class="stat-val" id="r-stock">—</div><div class="stat-label">Stock Value</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#ff4757"><div class="stat-val" id="r-low">—</div><div class="stat-label">Low Stock</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#3742fa"><div class="stat-val" id="r-repairs">—</div><div class="stat-label">Total Repairs</div></div></div>
-  <div class="col-6 col-md-3"><div class="stat-card" style="--accent-color:#2ed573"><div class="stat-val" id="r-rep-rev">—</div><div class="stat-label">Repair Revenue</div></div></div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card-v2" style="--accent-color:#2ed573">
+      <div class="stat-card-v2-label">Total Sales</div>
+      <div class="stat-card-v2-val" id="rp-total-sales">—</div>
+      <div class="stat-card-v2-trend flat">invoices</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card-v2" style="--accent-color:#ff4757">
+      <div class="stat-card-v2-label">Revenue</div>
+      <div class="stat-card-v2-val" id="rp-revenue">—</div>
+      <div class="stat-card-v2-trend flat">TND</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card-v2" style="--accent-color:#ffa502">
+      <div class="stat-card-v2-label">Gross Profit</div>
+      <div class="stat-card-v2-val" id="rp-profit">—</div>
+      <div class="stat-card-v2-trend flat">TND</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card-v2" style="--accent-color:#748ffc">
+      <div class="stat-card-v2-label">Repairs Done</div>
+      <div class="stat-card-v2-val" id="rp-repairs">—</div>
+      <div class="stat-card-v2-trend flat">completed</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card-v2" style="--accent-color:#ff6b9d">
+      <div class="stat-card-v2-label">Repair Revenue</div>
+      <div class="stat-card-v2-val" id="rp-rep-rev">—</div>
+      <div class="stat-card-v2-trend flat">TND</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4 col-xl-2">
+    <div class="stat-card-v2" style="--accent-color:#70d6ff">
+      <div class="stat-card-v2-label">Stock Value</div>
+      <div class="stat-card-v2-val" id="rp-stock-val">—</div>
+      <div class="stat-card-v2-trend flat">TND (current)</div>
+    </div>
+  </div>
 </div>
 
-<!-- REVENUE CHART -->
-<div class="zmoto-card p-3 mb-4">
-  <h6 class="fw-bold mb-3" style="font-family:'Barlow Condensed',sans-serif">📈 Revenue Over Time</h6>
-  <canvas id="revenueChart" height="90"></canvas>
+<!-- Charts -->
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="zmoto-card p-3">
+      <div class="section-label">Monthly Sales Revenue</div>
+      <canvas id="chart-sales" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="zmoto-card p-3">
+      <div class="section-label">Monthly Repairs Revenue</div>
+      <canvas id="chart-repairs" height="220"></canvas>
+    </div>
+  </div>
 </div>
 
-<div class="row g-4">
-  <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">🏆 Top Products</h6>
-    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Product</th><th>Sold</th><th>Revenue</th></tr></thead><tbody id="r-top"></tbody></table></div>
+<!-- Tables -->
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="zmoto-card p-0 overflow-hidden">
+      <div class="px-3 py-2 border-bottom" style="border-color:var(--border)!important">
+        <span class="section-label mb-0">Top Selling Products</span>
+      </div>
+      <div class="table-responsive" style="border:none;border-radius:0">
+        <table class="table mb-0">
+          <thead><tr><th>Product</th><th>Ref</th><th>Units Sold</th><th>Revenue</th></tr></thead>
+          <tbody id="rp-top-products"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
-  <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">👤 Top Customers (Sales)</h6>
-    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Customer</th><th>Sales</th><th>Spent</th></tr></thead><tbody id="r-cust"></tbody></table></div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">🔧 Top Customers (Repairs)</h6>
-    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Customer</th><th>Repairs</th><th>Spent</th></tr></thead><tbody id="r-rep-cust"></tbody></table></div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">🧑‍💼 By Staff</h6>
-    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Seller</th><th>Sales</th><th>Revenue</th></tr></thead><tbody id="r-staff"></tbody></table></div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">📅 Monthly Revenue</h6>
-    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Month</th><th>Sales</th><th>Revenue</th></tr></thead><tbody id="r-month"></tbody></table></div>
-  </div>
-  <div class="col-12 col-lg-6">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">🔧 Repairs by Status</h6>
-    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Status</th><th>Count</th><th>Revenue</th></tr></thead><tbody id="r-rep-status"></tbody></table></div>
-  </div>
-  <div class="col-12">
-    <h6 class="fw-bold mb-2" style="font-family:'Barlow Condensed',sans-serif">📦 Stock Value (current snapshot)</h6>
-    <div class="zmoto-card table-responsive"><table class="table mb-0"><thead><tr><th>Ref</th><th>Name</th><th>Qty</th><th>Value</th></tr></thead><tbody id="r-stock-tbl"></tbody></table></div>
+  <div class="col-lg-6">
+    <div class="zmoto-card p-0 overflow-hidden">
+      <div class="px-3 py-2 border-bottom" style="border-color:var(--border)!important">
+        <span class="section-label mb-0">Top Customers</span>
+      </div>
+      <div class="table-responsive" style="border:none;border-radius:0">
+        <table class="table mb-0">
+          <thead><tr><th>Customer</th><th>Orders</th><th>Total Spent</th></tr></thead>
+          <tbody id="rp-top-customers"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
-let chart = null;
+let salesChart = null, repairsChart = null;
 
-function fill(id, rows, fn, cols) {
-  const $t=$(id).empty();
-  rows.length ? rows.forEach(r=>$t.append(fn(r))) : $t.append(`<tr><td colspan="${cols}" class="text-center text-muted py-3">No data</td></tr>`);
+function getChartColors() {
+  const isDark = $('html').attr('data-theme') === 'dark';
+  return { grid: isDark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)', text: isDark ? '#6b7280' : '#6b7280' };
 }
 
-function renderChart(daily) {
-  const labels = daily.map(d => d.day.slice(5));   // MM-DD
-  const data   = daily.map(d => d.revenue);
-  const ctx    = document.getElementById('revenueChart').getContext('2d');
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.08)';
-  const textColor = isDark ? '#9aa0ad' : '#6b7280';
+function loadReports(from='', to='') {
+  const url = from ? `/api/reports?from_date=${from}&to_date=${to}` : '/api/reports';
+  $.getJSON(url, d => {
+    $('#rp-total-sales').text(d.total_sales);
+    $('#rp-revenue').text(fmt2(d.total_revenue));
+    $('#rp-profit').text(fmt2(d.gross_profit));
+    $('#rp-repairs').text(d.total_repairs);
+    $('#rp-rep-rev').text(fmt2(d.repairs_revenue));
+    $('#rp-stock-val').text(fmt2(d.total_stock_value));
 
-  if (chart) chart.destroy();
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Revenue (TND)',
-        data,
-        borderColor: '#ff4757',
-        backgroundColor: 'rgba(255,71,87,.12)',
-        fill: true,
-        tension: 0.3,
-        pointRadius: 2,
-        pointBackgroundColor: '#ff4757',
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
+    // Charts
+    const cols = getChartColors();
+    const chartOpts = {
+      responsive: true, plugins: { legend: { display: false } },
       scales: {
-        x: { grid: { color: gridColor }, ticks: { color: textColor, maxTicksLimit: 12 } },
-        y: { grid: { color: gridColor }, ticks: { color: textColor } }
+        x: { grid: { color: cols.grid }, ticks: { color: cols.text, font: { size: 11 } } },
+        y: { grid: { color: cols.grid }, ticks: { color: cols.text, font: { size: 11 } } }
       }
-    }
+    };
+
+    const months = [...d.monthly_sales].reverse();
+    if (salesChart) salesChart.destroy();
+    salesChart = new Chart($('#chart-sales')[0], {
+      type: 'bar',
+      data: { labels: months.map(m=>m.month), datasets: [{ label: 'Revenue TND', data: months.map(m=>m.revenue), backgroundColor: 'rgba(255,71,87,.6)', borderColor: '#ff4757', borderWidth: 1 }] },
+      options: chartOpts
+    });
+
+    const rmonths = [...d.monthly_repairs].reverse();
+    if (repairsChart) repairsChart.destroy();
+    repairsChart = new Chart($('#chart-repairs')[0], {
+      type: 'bar',
+      data: { labels: rmonths.map(m=>m.month), datasets: [{ label: 'Revenue TND', data: rmonths.map(m=>m.revenue), backgroundColor: 'rgba(116,143,252,.6)', borderColor: '#748ffc', borderWidth: 1 }] },
+      options: chartOpts
+    });
+
+    // Tables
+    $('#rp-top-products').html(d.top_products.length ? d.top_products.map((p,i) =>
+      `<tr><td><span class="badge bg-danger me-1">${i+1}</span>${p.name}</td>
+       <td class="mono text-muted-sm">${p.ref}</td>
+       <td><strong>${p.total_sold}</strong></td>
+       <td class="mono">${fmt2(p.revenue)} TND</td></tr>`).join('')
+      : '<tr><td colspan="4" class="text-center text-muted-sm py-3">No data</td></tr>');
+
+    $('#rp-top-customers').html(d.top_customers.length ? d.top_customers.map((c,i) =>
+      `<tr><td><span class="badge bg-danger me-1">${i+1}</span>${c.name}<br><small class="text-muted-sm">${c.phone||''}</small></td>
+       <td>${c.total_orders}</td>
+       <td class="mono">${fmt2(c.total_spent)} TND</td></tr>`).join('')
+      : '<tr><td colspan="3" class="text-center text-muted-sm py-3">No data</td></tr>');
   });
 }
 
-function loadReports() {
-  const from = $('#from-date').val();
-  const to   = $('#to-date').val();
-  let url = '/api/reports';
-  if (from) url += `?from_date=${from}&to_date=${to}`;
+$('#btn-rp-filter').on('click', () => loadReports($('#rp-from').val(), $('#rp-to').val()));
+$('#btn-rp-all').on('click', () => { $('#rp-from,#rp-to').val(''); loadReports(); });
 
-  apiG(url).done(function(d) {
-    const o = d.overview;
-    $('#r-sales').text(o.total_sales);
-    $('#r-rev').text(fmt(o.total_revenue));
-    $('#r-profit').text(fmt(o.gross_profit));
-    $('#r-avg').text(fmt(o.avg_sale));
-    $('#r-stock').text(fmt(o.total_stock_value));
-    $('#r-low').text(o.low_stock_count);
-    $('#r-repairs').text(o.total_repairs);
-    $('#r-rep-rev').text(fmt(o.repairs_revenue));
-
-    $('#range-label').text(
-      d.range.from ? `Showing: ${d.range.from} → ${d.range.to}` : 'Showing: all time'
-    );
-
-    renderChart(d.daily_sales);
-
-    fill('#r-top',      d.top_products,         r=>`<tr><td>${r.name}</td><td>${r.total_sold}</td><td>${fmt(r.revenue)} TND</td></tr>`, 3);
-    fill('#r-cust',      d.sales_by_customer,    r=>`<tr><td>${r.customer}</td><td>${r.nb_sales}</td><td>${fmt(r.total_spent)} TND</td></tr>`, 3);
-    fill('#r-rep-cust',  d.top_repair_customers, r=>`<tr><td>${r.customer}</td><td>${r.nb_repairs}</td><td>${fmt(r.total_spent||0)} TND</td></tr>`, 3);
-    fill('#r-month',     d.monthly_sales,        r=>`<tr><td>${r.month}</td><td>${r.nb}</td><td>${fmt(r.revenue)} TND</td></tr>`, 3);
-    fill('#r-staff',     d.sales_by_user,        r=>`<tr><td>${r.seller}</td><td>${r.nb_sales}</td><td>${fmt(r.total_revenue)} TND</td></tr>`, 3);
-    fill('#r-rep-status', d.repairs_by_status,   r=>`<tr><td><span class="badge status-${r.status}">${r.status.replace(/_/g,' ')}</span></td><td>${r.nb}</td><td>${fmt(r.revenue||0)} TND</td></tr>`, 3);
-    fill('#r-stock-tbl', d.stock_value,          r=>`<tr><td>${r.ref}</td><td>${r.name}</td><td>${r.qty}</td><td>${fmt(r.stock_value)} TND</td></tr>`, 4);
-  });
-}
-
-// Quick range buttons (7d / 30d / 90d)
-$('[data-range]').on('click', function() {
-  const days  = parseInt($(this).data('range'));
-  const today = new Date();
-  const from  = new Date(today); from.setDate(from.getDate() - days);
-  $('#from-date').val(from.toISOString().split('T')[0]);
-  $('#to-date').val(today.toISOString().split('T')[0]);
-  loadReports();
-});
-
-function setThisMonth() {
-  const today = new Date();
-  const first = new Date(today.getFullYear(), today.getMonth(), 1);
-  $('#from-date').val(first.toISOString().split('T')[0]);
-  $('#to-date').val(today.toISOString().split('T')[0]);
-}
-
-$('#btn-thismonth').on('click', function() {
-  setThisMonth();
-  loadReports();
-});
-
-$('#btn-alltime').on('click', function() {
-  $('#from-date').val(''); $('#to-date').val('');
-  loadReports();
-});
-
-$('#btn-filter').on('click', loadReports);
-
-// Default view: this month
-setThisMonth();
-loadReports();
+const today = new Date().toISOString().slice(0,10);
+const firstOfYear = today.slice(0,4)+'-01-01';
+$('#rp-from').val(firstOfYear); $('#rp-to').val(today);
+loadReports(firstOfYear, today);
 </script>
 {% endblock %}

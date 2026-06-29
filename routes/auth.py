@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_db
 from auth_helpers import login_required
+import json
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -18,11 +19,15 @@ def api_login():
         user = c.execute("SELECT * FROM users WHERE username=?", (d.get("username","").strip(),)).fetchone()
     if not user or not check_password_hash(user["password"], d.get("password","")):
         return jsonify({"error": "Invalid username or password"}), 401
+    if not user["is_active"]:
+        return jsonify({"error": "Account is disabled. Contact your administrator."}), 403
     session.permanent = True
-    session["user_id"]   = user["id"]
-    session["username"]  = user["username"]
-    session["full_name"] = user["full_name"]
-    session["role"]      = user["role"]
+    session["user_id"]     = user["id"]
+    session["username"]    = user["username"]
+    session["full_name"]   = user["full_name"]
+    session["role"]        = user["role"]
+    session["is_active"]   = bool(user["is_active"])
+    session["permissions"] = user["permissions"] or "{}"
     return jsonify({"ok": True, "role": user["role"], "full_name": user["full_name"]})
 
 @auth_bp.route("/api/auth/logout", methods=["POST"])
@@ -34,12 +39,14 @@ def api_logout():
 def api_me():
     if "user_id" not in session:
         return jsonify({"logged_in": False})
+    from auth_helpers import get_user_permissions
     return jsonify({
-        "logged_in": True,
-        "user_id":   session["user_id"],
-        "username":  session["username"],
-        "full_name": session["full_name"],
-        "role":      session["role"],
+        "logged_in":   True,
+        "user_id":     session["user_id"],
+        "username":    session["username"],
+        "full_name":   session["full_name"],
+        "role":        session["role"],
+        "permissions": get_user_permissions(),
     })
 
 @auth_bp.route("/api/auth/password/<int:uid>", methods=["PUT"])

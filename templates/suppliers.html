@@ -1,73 +1,97 @@
 {% extends "base.html" %}
 {% set active = "suppliers" %}
 {% block title %}Suppliers{% endblock %}
-{% block page_title %}🏭 Suppliers{% endblock %}
+{% block page_title %}<i class="bi bi-building me-2 text-accent"></i>Suppliers{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <input class="form-control form-control-sm" id="search" placeholder="🔍 Search suppliers…" style="max-width:260px">
-  <div class="d-flex gap-2">
-    <button class="btn btn-danger btn-sm" id="btn-add">＋ Add</button>
-    <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
-    <button class="btn btn-outline-danger btn-sm" id="btn-del">🗑 Delete</button>
+<div class="page-header">
+  <h1>Suppliers</h1>
+  <button class="btn btn-danger btn-sm" onclick="openModal()"><i class="bi bi-plus-lg me-1"></i>Add Supplier</button>
+</div>
+<div class="zmoto-card p-3 mb-3">
+  <div class="input-group input-group-sm" style="max-width:400px">
+    <span class="input-group-text"><i class="bi bi-search"></i></span>
+    <input class="form-control" id="sp-q" placeholder="Search by name or phone…">
   </div>
 </div>
-<div class="zmoto-card table-responsive">
-  <table class="table table-hover mb-0">
-    <thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Email</th><th>Address</th><th>Notes</th><th>Since</th></tr></thead>
-    <tbody id="tbl"></tbody>
+<div class="table-responsive">
+  <table class="table">
+    <thead><tr><th>Company Name</th><th>Phone</th><th>Email</th><th>Address</th><th>Notes</th><th>Actions</th></tr></thead>
+    <tbody id="sp-tbody"><tr><td colspan="6" class="text-center py-4 text-muted-sm"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Loading…</td></tr></tbody>
   </table>
 </div>
-<div class="modal fade" id="modalP" tabindex="-1">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title" id="mtitle">Add Supplier</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-      <input type="hidden" id="pid">
-      <div class="mb-2"><label class="form-label">Name *</label><input class="form-control" id="p-name"></div>
-      <div class="row g-2 mb-2">
-        <div class="col-6"><label class="form-label">Phone</label><input class="form-control" id="p-phone" type="tel"></div>
-        <div class="col-6"><label class="form-label">Email</label><input class="form-control" id="p-email" type="email"></div>
+
+<!-- Modal -->
+<div class="modal fade" id="modalSupplier" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title" id="sp-title"><i class="bi bi-building me-2"></i>Add Supplier</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="sp-id">
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Company Name *</label><input class="form-control" id="sp-name" placeholder="Supplier name"></div>
+          <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" id="sp-phone" placeholder="+216…"></div>
+          <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" id="sp-email" type="email"></div>
+          <div class="col-md-6"><label class="form-label">Address</label><input class="form-control" id="sp-address" placeholder="City, region…"></div>
+          <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" id="sp-notes" rows="2" placeholder="Products supplied, payment terms…"></textarea></div>
+        </div>
       </div>
-      <div class="mb-2"><label class="form-label">Address</label><input class="form-control" id="p-addr"></div>
-      <div class="mb-2"><label class="form-label">Notes</label><input class="form-control" id="p-notes"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="btn-save-supplier"><i class="bi bi-check-lg me-1"></i>Save</button>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger btn-sm" id="btn-save">Save</button></div>
-  </div></div>
+  </div>
 </div>
 {% endblock %}
 {% block extra_js %}
 <script>
-let sel=null;
-const modal=new bootstrap.Modal('#modalP');
-function load(){
-  apiG('/api/suppliers?q='+encodeURIComponent($('#search').val())).done(rows=>{
-    const $t=$('#tbl').empty();
-    rows.length ? rows.forEach(r=>{ $(`<tr><td>${r.id}</td><td><b>${r.name}</b></td><td>${r.phone||'—'}</td><td>${r.email||'—'}</td><td>${r.address||'—'}</td><td>${r.notes||'—'}</td><td>${(r.created_at||'').slice(0,10)}</td></tr>`).on('click',function(){$('#tbl tr').removeClass('table-active');$(this).addClass('table-active');sel=r;}).appendTo($t); })
-              : $t.append('<tr><td colspan="7" class="text-center text-muted py-4">No suppliers</td></tr>');
+let suppliers = [];
+function load(q='') {
+  $.getJSON('/api/suppliers?q='+encodeURIComponent(q), data => {
+    suppliers = data;
+    if (!data.length) { $('#sp-tbody').html('<tr><td colspan="6" class="text-center py-4 text-muted-sm">No suppliers found</td></tr>'); return; }
+    $('#sp-tbody').html(data.map(s => `<tr>
+      <td><div class="d-flex align-items-center gap-2">
+        <div class="avatar-circle-sm" style="background:#3742fa">${(s.name||'?').slice(0,2).toUpperCase()}</div>
+        <strong>${s.name}</strong></div></td>
+      <td>${s.phone||'—'}</td>
+      <td class="text-muted-sm">${s.email||'—'}</td>
+      <td class="text-muted-sm">${s.address||'—'}</td>
+      <td class="text-muted-sm" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary py-0 me-1" onclick="openModal(${s.id})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger py-0" onclick="delSupplier(${s.id},'${s.name.replace(/'/g,"\\'")}')"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join(''));
   });
 }
-function openModal(d){
-  $('#mtitle').text(d?'Edit Supplier':'Add Supplier'); $('#pid').val(d?.id||'');
-  $('#p-name').val(d?.name||'');$('#p-phone').val(d?.phone||'');$('#p-email').val(d?.email||'');$('#p-addr').val(d?.address||'');$('#p-notes').val(d?.notes||'');
-  modal.show();
-}
-$('#search').on('input',load);
-$('#btn-add').on('click',()=>openModal(null));
-$('#btn-edit').on('click',()=>{if(!sel){toast('Select a supplier','error');return;}openModal(sel);});
-$('#btn-save').on('click',()=>{
-  const id=$('#pid').val(), body={name:$('#p-name').val().trim(),phone:$('#p-phone').val().trim(),email:$('#p-email').val().trim(),address:$('#p-addr').val().trim(),notes:$('#p-notes').val().trim()};
-  if(!body.name){toast('Name required','error');return;}
-  (id?apiU('/api/suppliers/'+id,body):apiP('/api/suppliers',body)).done(()=>{modal.hide();toast(id?'Updated!':'Added!');sel=null;load();});
-});
-$('#btn-del').on('click',()=>{
-  if(!sel){toast('Select a supplier','error');return;}
-  if(!confirm('Delete "'+sel.name+'"?'))return;
-  apiD('/api/suppliers/'+sel.id).done(()=>{sel=null;toast('Deleted');load();});
-});
-load();
+let searchTimer;
+$('#sp-q').on('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => load($('#sp-q').val()), 300); });
 
-// Auto-open Add modal when arriving from dashboard quick action
-if (new URLSearchParams(window.location.search).get('action') === 'add') {
-  setTimeout(() => openModal(null), 150);
+function openModal(id=null) {
+  const s = id ? suppliers.find(x=>x.id===id) : null;
+  $('#sp-title').html(s ? '<i class="bi bi-pencil me-2"></i>Edit Supplier' : '<i class="bi bi-building me-2"></i>Add Supplier');
+  $('#sp-id').val(s?.id||''); $('#sp-name').val(s?.name||''); $('#sp-phone').val(s?.phone||'');
+  $('#sp-email').val(s?.email||''); $('#sp-address').val(s?.address||''); $('#sp-notes').val(s?.notes||'');
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('#modalSupplier')).show();
 }
+$('#btn-save-supplier').on('click', () => {
+  const id = $('#sp-id').val();
+  if (!$('#sp-name').val().trim()) { toast('Name is required','error'); return; }
+  const d = { name: $('#sp-name').val().trim(), phone: $('#sp-phone').val().trim(),
+    email: $('#sp-email').val().trim(), address: $('#sp-address').val().trim(), notes: $('#sp-notes').val().trim() };
+  const req = id ? apiU('/api/suppliers/'+id, d) : apiP('/api/suppliers', d);
+  req.done(() => {
+    bootstrap.Modal.getInstance('#modalSupplier')?.hide();
+    toast(id ? 'Supplier updated!' : 'Supplier added!'); load($('#sp-q').val());
+  }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+function delSupplier(id, name) {
+  confirm_action(`Delete supplier "${name}"?`, () => {
+    apiD('/api/suppliers/'+id).done(() => { toast('Supplier deleted'); load($('#sp-q').val()); })
+      .fail(r => toast(r.responseJSON?.error||'Error','error'));
+  });
+}
+load();
 </script>
 {% endblock %}

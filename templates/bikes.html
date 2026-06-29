@@ -1,169 +1,152 @@
 {% extends "base.html" %}
 {% set active = "bikes" %}
 {% block title %}Bikes{% endblock %}
-{% block page_title %}🏍 Bikes{% endblock %}
-
+{% block page_title %}<i class="bi bi-bicycle me-2 text-accent"></i>Bikes{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-  <input class="form-control" id="search" placeholder="🔍 Search brand, model, plate, owner…" style="max-width:300px">
-  <div class="d-flex gap-2">
-    <button class="btn btn-danger btn-sm" id="btn-add">＋ Add Bike</button>
-    <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
-    <button class="btn btn-outline-warning btn-sm" id="btn-transfer">🔁 Transfer Owner</button>
-    <button class="btn btn-outline-danger btn-sm" id="btn-del">🗑 Delete</button>
+<div class="page-header">
+  <h1>Bikes</h1>
+  <button class="btn btn-danger btn-sm" onclick="openModal()"><i class="bi bi-plus-lg me-1"></i>Add Bike</button>
+</div>
+<div class="zmoto-card p-3 mb-3">
+  <div class="input-group input-group-sm" style="max-width:400px">
+    <span class="input-group-text"><i class="bi bi-search"></i></span>
+    <input class="form-control" id="bk-q" placeholder="Search by brand, model, plate, owner…">
   </div>
 </div>
-
-<div class="zmoto-card table-responsive">
-  <table class="table table-hover mb-0">
-    <thead><tr><th>ID</th><th>Owner</th><th>Brand</th><th>Model</th><th>Year</th><th>Plate</th><th>Color</th><th>Mileage</th><th>Repairs</th></tr></thead>
-    <tbody id="tbl"></tbody>
+<div class="table-responsive">
+  <table class="table">
+    <thead><tr><th>Owner</th><th>Brand / Model</th><th>Year</th><th>Plate</th><th>Color</th><th>Mileage</th><th>Actions</th></tr></thead>
+    <tbody id="bk-tbody"><tr><td colspan="7" class="text-center py-4 text-muted-sm"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Loading…</td></tr></tbody>
   </table>
 </div>
 
-<!-- Add/Edit Bike Modal -->
+<!-- Add/Edit Modal -->
 <div class="modal fade" id="modalBike" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="mtitle">Add Bike</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
+      <div class="modal-header"><h5 class="modal-title" id="bk-modal-title"><i class="bi bi-bicycle me-2"></i>Add Bike</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <input type="hidden" id="bid">
-        <div class="mb-2">
-          <label class="form-label">Owner *</label>
-          <select class="form-select" id="b-owner"></select>
+        <input type="hidden" id="bk-id">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Owner (Customer) *</label>
+            <div class="search-wrap">
+              <input class="form-control form-control-sm" id="bk-owner-search" placeholder="Search customer…" autocomplete="off">
+              <div class="prod-search-list" id="bk-owner-list" style="display:none"></div>
+            </div>
+            <div id="bk-owner-selected" class="text-muted-sm mt-1" style="display:none">
+              <i class="bi bi-person-check text-accent me-1"></i><span id="bk-owner-name"></span>
+              <button class="btn btn-link btn-sm text-danger p-0 ms-2" onclick="clearBkOwner()">✕</button>
+            </div>
+            <input type="hidden" id="bk-owner-id">
+          </div>
+          <div class="col-md-4"><label class="form-label">Brand *</label><input class="form-control" id="bk-brand" placeholder="e.g. Yamaha"></div>
+          <div class="col-md-4"><label class="form-label">Model</label><input class="form-control" id="bk-model" placeholder="e.g. YBR 125"></div>
+          <div class="col-md-4"><label class="form-label">Year</label><input class="form-control" id="bk-year" type="number" placeholder="e.g. 2022"></div>
+          <div class="col-md-4"><label class="form-label">Plate Number</label><input class="form-control" id="bk-plate" placeholder="e.g. 123 TUN 4567"></div>
+          <div class="col-md-4"><label class="form-label">VIN / Chassis</label><input class="form-control" id="bk-vin" placeholder="VIN number"></div>
+          <div class="col-md-4"><label class="form-label">Color</label><input class="form-control" id="bk-color" placeholder="e.g. Red"></div>
+          <div class="col-md-4"><label class="form-label">Mileage (km)</label><input class="form-control" id="bk-mileage" type="number" min="0" value="0"></div>
+          <div class="col-12"><label class="form-label">Note</label><textarea class="form-control" id="bk-note" rows="2"></textarea></div>
         </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6"><label class="form-label">Brand *</label><input class="form-control" id="b-brand" placeholder="Yamaha"></div>
-          <div class="col-6"><label class="form-label">Model</label><input class="form-control" id="b-model" placeholder="YBR 125"></div>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-4"><label class="form-label">Year</label><input class="form-control" id="b-year" type="number" placeholder="2022"></div>
-          <div class="col-4"><label class="form-label">Plate</label><input class="form-control" id="b-plate" placeholder="123 TUN 4567"></div>
-          <div class="col-4"><label class="form-label">Color</label><input class="form-control" id="b-color" placeholder="Rouge"></div>
-        </div>
-        <div class="row g-2 mb-2">
-          <div class="col-6"><label class="form-label">VIN / Châssis</label><input class="form-control" id="b-vin"></div>
-          <div class="col-6"><label class="form-label">Mileage (km)</label><input class="form-control" id="b-mileage" type="number" value="0"></div>
-        </div>
-        <div class="mb-2"><label class="form-label">Note</label><input class="form-control" id="b-note"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-danger btn-sm" id="btn-save">Save Bike</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Transfer Owner Modal -->
-<div class="modal fade" id="modalTransfer" tabindex="-1">
-  <div class="modal-dialog modal-sm">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">🔁 Transfer Owner</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted small mb-2" id="transfer-info"></p>
-        <label class="form-label">New Owner *</label>
-        <select class="form-select" id="t-owner"></select>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-warning btn-sm" id="btn-confirm-transfer">Transfer</button>
+        <button class="btn btn-danger btn-sm" id="btn-save-bike"><i class="bi bi-check-lg me-1"></i>Save</button>
       </div>
     </div>
   </div>
 </div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
-let sel = null;
-let allCustomers = [];
-const modal = new bootstrap.Modal('#modalBike');
-const transferModal = new bootstrap.Modal('#modalTransfer');
-
-function loadCustomersIntoSelects() {
-  return apiG('/api/customers').done(function(custs) {
-    allCustomers = custs;
-    const opts = custs.map(c => `<option value="${c.id}">${c.name} — ${c.phone||'no phone'}</option>`).join('');
-    $('#b-owner, #t-owner').html(opts);
+let bikes = [], bkOwner = null;
+function load(q='') {
+  $.getJSON('/api/bikes?q='+encodeURIComponent(q), data => {
+    bikes = data;
+    if (!data.length) { $('#bk-tbody').html('<tr><td colspan="7" class="text-center py-4 text-muted-sm">No bikes found</td></tr>'); return; }
+    $('#bk-tbody').html(data.map(b => `<tr>
+      <td><div class="d-flex align-items-center gap-2">
+        <div class="avatar-circle-sm" style="background:#3742fa">${(b.owner_name||'?').slice(0,2).toUpperCase()}</div>
+        <div><div>${b.owner_name}</div><div class="text-muted-sm">${b.owner_phone||''}</div></div>
+      </div></td>
+      <td><strong>${b.brand}</strong> ${b.model||''}</td>
+      <td>${b.year||'—'}</td>
+      <td class="mono">${b.plate||'—'}</td>
+      <td>${b.color||'—'}</td>
+      <td class="text-muted-sm">${b.mileage ? b.mileage.toLocaleString()+' km' : '—'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary py-0 me-1" onclick="editBike(${b.id})"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger py-0" onclick="delBike(${b.id},'${b.brand} ${b.model||''}')"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join(''));
   });
 }
+let searchTimer;
+$('#bk-q').on('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => load($('#bk-q').val()), 300); });
 
-function load() {
-  apiG('/api/bikes?q='+encodeURIComponent($('#search').val())).done(function(rows) {
-    const $t = $('#tbl').empty();
-    if (!rows.length) { $t.append('<tr><td colspan="9" class="text-center text-muted py-4">No bikes found</td></tr>'); return; }
-    rows.forEach(r => {
-      $(`<tr>
-        <td>${r.id}</td>
-        <td><b>${r.owner_name}</b><br><span class="text-muted small">${r.owner_phone||''}</span></td>
-        <td>${r.brand}</td><td>${r.model||'—'}</td><td>${r.year||'—'}</td>
-        <td>${r.plate||'—'}</td><td>${r.color||'—'}</td><td>${r.mileage||0} km</td>
-        <td><span class="badge status-in_progress" id="rep-count-${r.id}">…</span></td>
-      </tr>`).on('click', function(){ $('#tbl tr').removeClass('table-active'); $(this).addClass('table-active'); sel=r; }).appendTo($t);
-
-      // lazy-load repair count
-      apiG('/api/bikes/'+r.id).done(d => $('#rep-count-'+r.id).text(d.repairs.length+' repairs'));
+// Owner search
+let ownerTimer;
+$('#bk-owner-search').on('input', function() {
+  clearTimeout(ownerTimer);
+  const q = $(this).val().trim(); if (!q) { $('#bk-owner-list').hide(); return; }
+  ownerTimer = setTimeout(() => {
+    $.getJSON('/api/customers?q='+encodeURIComponent(q), data => {
+      if (!data.length) { $('#bk-owner-list').hide(); return; }
+      $('#bk-owner-list').html(data.map(c =>
+        `<div class="psl-item" data-id="${c.id}" data-name="${c.name.replace(/"/g,'&quot;')}">
+          <span>${c.name}</span><span class="text-muted-sm">${c.phone||''}</span>
+        </div>`).join('')).show();
     });
+  }, 250);
+});
+$(document).on('click', '#bk-owner-list .psl-item', function() {
+  bkOwner = { id: +$(this).data('id'), name: $(this).data('name') };
+  $('#bk-owner-id').val(bkOwner.id); $('#bk-owner-name').text(bkOwner.name);
+  $('#bk-owner-selected')).show(); $('#bk-owner-search').val(''); $('#bk-owner-list').hide();
+});
+function clearBkOwner() { bkOwner = null; $('#bk-owner-id').val(''); $('#bk-owner-selected').hide(); }
+$(document).on('click', e => { if (!$(e.target).closest('.search-wrap').length) $('#bk-owner-list').hide(); });
+
+function openModal(b=null) {
+  bkOwner = null; clearBkOwner();
+  if (b) {
+    $('#bk-modal-title').html('<i class="bi bi-pencil me-2"></i>Edit Bike');
+    $('#bk-id').val(b.id); $('#bk-owner-id').val(b.owner_id);
+    $('#bk-owner-name').text(b.owner_name); $('#bk-owner-selected').show();
+    bkOwner = { id: b.owner_id, name: b.owner_name };
+    $('#bk-brand').val(b.brand); $('#bk-model').val(b.model||''); $('#bk-year').val(b.year||'');
+    $('#bk-plate').val(b.plate||''); $('#bk-vin').val(b.vin||''); $('#bk-color').val(b.color||'');
+    $('#bk-mileage').val(b.mileage||0); $('#bk-note').val(b.note||'');
+  } else {
+    $('#bk-modal-title').html('<i class="bi bi-plus-lg me-2"></i>Add Bike');
+    $('#bk-id').val(''); $('#bk-brand,#bk-model,#bk-year,#bk-plate,#bk-vin,#bk-color,#bk-note').val('');
+    $('#bk-mileage').val(0);
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('#modalBike')).show();
+}
+function editBike(id) { openModal(bikes.find(b=>b.id===id)); }
+function delBike(id, name) {
+  confirm_action(`Delete bike "${name}"?`, () => {
+    apiD('/api/bikes/'+id).done(() => { toast('Bike deleted'); load($('#bk-q').val()); })
+      .fail(r => toast(r.responseJSON?.error||'Error','error'));
   });
 }
-
-function openModal(d) {
-  $('#mtitle').text(d?'Edit Bike':'Add Bike');
-  $('#bid').val(d?.id||'');
-  loadCustomersIntoSelects().done(() => { if (d) $('#b-owner').val(d.owner_id); });
-  $('#b-brand').val(d?.brand||''); $('#b-model').val(d?.model||'');
-  $('#b-year').val(d?.year||''); $('#b-plate').val(d?.plate||'');
-  $('#b-color').val(d?.color||''); $('#b-vin').val(d?.vin||'');
-  $('#b-mileage').val(d?.mileage??0); $('#b-note').val(d?.note||'');
-  modal.show();
-}
-
-$('#search').on('input', load);
-$('#btn-add').on('click', () => openModal(null));
-$('#btn-edit').on('click', () => { if (!sel) { toast('Select a bike first','error'); return; } openModal(sel); });
-
-$('#btn-save').on('click', function() {
-  const id = $('#bid').val();
-  const body = {
-    owner_id: parseInt($('#b-owner').val()), brand: $('#b-brand').val().trim(), model: $('#b-model').val().trim(),
-    year: parseInt($('#b-year').val())||null, plate: $('#b-plate').val().trim(), color: $('#b-color').val().trim(),
-    vin: $('#b-vin').val().trim(), mileage: parseInt($('#b-mileage').val())||0, note: $('#b-note').val().trim()
+$('#btn-save-bike').on('click', () => {
+  if (!$('#bk-owner-id').val()) { toast('Select an owner','error'); return; }
+  if (!$('#bk-brand').val().trim()) { toast('Brand is required','error'); return; }
+  const id = $('#bk-id').val();
+  const d = {
+    owner_id: +$('#bk-owner-id').val(), brand: $('#bk-brand').val().trim(), model: $('#bk-model').val().trim(),
+    year: $('#bk-year').val()||null, plate: $('#bk-plate').val().trim(), vin: $('#bk-vin').val().trim(),
+    color: $('#bk-color').val().trim(), mileage: parseInt($('#bk-mileage').val()||0), note: $('#bk-note').val(),
   };
-  if (!body.owner_id || !body.brand) { toast('Owner and Brand required','error'); return; }
-  (id ? apiU('/api/bikes/'+id, body) : apiP('/api/bikes', body))
-    .done(() => { modal.hide(); toast(id?'Bike updated!':'Bike added!'); sel=null; load(); })
-    .fail(r => toast(r.responseJSON?.error||'Error','error'));
+  const req = id ? apiU('/api/bikes/'+id, d) : apiP('/api/bikes', d);
+  req.done(() => {
+    bootstrap.Modal.getInstance('#modalBike')?.hide();
+    toast(id ? 'Bike updated!' : 'Bike added!'); load($('#bk-q').val());
+  }).fail(r => toast(r.responseJSON?.error||'Error','error'));
 });
-
-$('#btn-del').on('click', function() {
-  if (!sel) { toast('Select a bike first','error'); return; }
-  if (!confirm(`Delete ${sel.brand} ${sel.model} (owner: ${sel.owner_name})?`)) return;
-  apiD('/api/bikes/'+sel.id).done(() => { sel=null; toast('Deleted'); load(); });
-});
-
-$('#btn-transfer').on('click', function() {
-  if (!sel) { toast('Select a bike first','error'); return; }
-  $('#transfer-info').text(`${sel.brand} ${sel.model||''} (${sel.plate||'no plate'}) — currently owned by ${sel.owner_name}`);
-  loadCustomersIntoSelects().done(() => $('#t-owner').val(sel.owner_id));
-  transferModal.show();
-});
-
-$('#btn-confirm-transfer').on('click', function() {
-  const newOwner = parseInt($('#t-owner').val());
-  if (!newOwner) { toast('Select a new owner','error'); return; }
-  if (newOwner === sel.owner_id) { toast('Bike already belongs to this owner','error'); return; }
-  apiU('/api/bikes/'+sel.id+'/transfer', { owner_id: newOwner })
-    .done(() => { transferModal.hide(); toast('Owner transferred!'); sel=null; load(); })
-    .fail(r => toast(r.responseJSON?.error||'Error','error'));
-});
-
 load();
 </script>
 {% endblock %}

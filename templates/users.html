@@ -1,82 +1,178 @@
 {% extends "base.html" %}
 {% set active = "users" %}
 {% block title %}Users{% endblock %}
-{% block page_title %}🔑 User Management{% endblock %}
+{% block page_title %}<i class="bi bi-shield-lock me-2 text-accent"></i>Users & Permissions{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <span class="text-muted small">Manage who can access Z-MOTO Manager</span>
-  <div class="d-flex gap-2">
-    <button class="btn btn-danger btn-sm" id="btn-add">＋ Add User</button>
-    <button class="btn btn-secondary btn-sm" id="btn-edit">✏ Edit</button>
-    <button class="btn btn-outline-danger btn-sm" id="btn-del">🗑 Delete</button>
-  </div>
+<div class="page-header">
+  <h1>Users & Permissions</h1>
+  <button class="btn btn-danger btn-sm" onclick="openModal()"><i class="bi bi-person-plus me-1"></i>Add User</button>
 </div>
-<div class="zmoto-card table-responsive">
-  <table class="table table-hover mb-0">
-    <thead><tr><th>ID</th><th>Username</th><th>Full Name</th><th>Role</th><th>Created</th></tr></thead>
-    <tbody id="tbl"></tbody>
-  </table>
+
+<div class="row g-3" id="users-grid">
+  <div class="col-12 text-center py-4 text-muted-sm"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Loading…</div>
 </div>
-<div class="modal fade" id="modalU" tabindex="-1">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title" id="mtitle">Add User</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-      <input type="hidden" id="uid">
-      <div class="row g-2 mb-2">
-        <div class="col-6"><label class="form-label">Username *</label><input class="form-control" id="u-username" autocomplete="off"></div>
-        <div class="col-6"><label class="form-label">Full Name</label><input class="form-control" id="u-fullname"></div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="modalUser" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title" id="u-modal-title"><i class="bi bi-person-plus me-2"></i>Add User</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="u-id">
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">Full Name</label><input class="form-control" id="u-fullname" placeholder="Display name"></div>
+          <div class="col-md-6"><label class="form-label">Username *</label><input class="form-control" id="u-username" placeholder="login username"></div>
+          <div class="col-md-6"><label class="form-label">Password <span id="u-pw-hint" class="text-muted-sm">(required for new user)</span></label><input class="form-control" id="u-password" type="password" placeholder="Leave empty to keep current"></div>
+          <div class="col-md-6"><label class="form-label">Role</label>
+            <select class="form-select" id="u-role">
+              <option value="staff">Staff</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <label class="form-label mb-0">Account Status</label>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="u-active" checked>
+                <label class="form-check-label" for="u-active">Active</label>
+              </div>
+            </div>
+          </div>
+          <div class="col-12" id="u-perms-section">
+            <label class="form-label">Permissions (Staff only)</label>
+            <div class="zmoto-card p-3">
+              <div id="u-perms-grid" class="row g-2"></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="row g-2 mb-2">
-        <div class="col-6">
-          <label class="form-label">Password <small id="pw-hint" class="text-muted" style="text-transform:none;font-weight:400">(blank = keep)</small></label>
-          <input class="form-control" id="u-password" type="password" autocomplete="new-password">
-        </div>
-        <div class="col-6"><label class="form-label">Role</label>
-          <select class="form-select" id="u-role"><option value="staff">Staff</option><option value="admin">Admin</option></select>
-        </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-danger btn-sm" id="btn-del-user" style="display:none"><i class="bi bi-trash me-1"></i>Delete</button>
+        <button class="btn btn-secondary btn-sm ms-auto" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="btn-save-user"><i class="bi bi-check-lg me-1"></i>Save</button>
       </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger btn-sm" id="btn-save">Save</button></div>
-  </div></div>
+  </div>
 </div>
 {% endblock %}
 {% block extra_js %}
 <script>
-let sel=null;
-const modal=new bootstrap.Modal('#modalU');
-function load(){
-  apiG('/api/users').done(rows=>{
-    const $t=$('#tbl').empty(); sel=null;
-    rows.length ? rows.forEach(r=>{
-      $(`<tr><td>${r.id}</td><td><b>${r.username}</b></td><td>${r.full_name||'—'}</td>
-         <td><span class="badge ${r.role==='admin'?'status-in_progress':'status-done'}">${r.role}</span></td>
-         <td>${(r.created_at||'').slice(0,10)}</td></tr>`)
-        .on('click',function(){$('#tbl tr').removeClass('table-active');$(this).addClass('table-active');sel=r;}).appendTo($t);
-    }) : $t.append('<tr><td colspan="5" class="text-center text-muted py-4">No users</td></tr>');
+const PERMS = [
+  { key:'inventory', label:'Inventory', icon:'bi-boxes' },
+  { key:'sales',     label:'Sales',     icon:'bi-cash-stack' },
+  { key:'repairs',   label:'Repairs',   icon:'bi-wrench-adjustable' },
+  { key:'purchases', label:'Purchases', icon:'bi-cart-plus' },
+  { key:'customers', label:'Customers', icon:'bi-people' },
+  { key:'bikes',     label:'Bikes',     icon:'bi-bicycle' },
+  { key:'suppliers', label:'Suppliers', icon:'bi-building' },
+  { key:'reports',   label:'Reports',   icon:'bi-bar-chart-line' },
+];
+
+let users = [];
+
+function load() {
+  $.getJSON('/api/users', data => {
+    users = data;
+    if (!data.length) { $('#users-grid').html('<div class="col-12 text-center text-muted-sm py-4">No users found</div>'); return; }
+    $('#users-grid').html(data.map(u => {
+      let perms = {};
+      try { perms = JSON.parse(u.permissions||'{}'); } catch(e) {}
+      const permBadges = u.role === 'admin'
+        ? '<span class="badge bg-danger">Full Access</span>'
+        : PERMS.filter(p => perms[p.key]).map(p => `<span class="badge bg-secondary me-1">${p.label}</span>`).join('') || '<span class="text-muted-sm">No permissions</span>';
+      return `<div class="col-md-6 col-xl-4">
+        <div class="zmoto-card p-3 h-100">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="avatar-circle" style="background:${u.role==='admin'?'#ff4757':'#3742fa'}">${(u.full_name||u.username).slice(0,2).toUpperCase()}</div>
+            <div class="min-w-0">
+              <div class="fw-bold">${u.full_name||u.username}</div>
+              <div class="text-muted-sm">@${u.username}</div>
+            </div>
+            <div class="ms-auto d-flex flex-column align-items-end gap-1">
+              <span class="badge ${u.role==='admin'?'bg-danger':'bg-secondary'}">${u.role.toUpperCase()}</span>
+              <span class="badge ${u.is_active?'pay-paid':'pay-unpaid'}">${u.is_active?'Active':'Disabled'}</span>
+            </div>
+          </div>
+          <div class="mb-3">${permBadges}</div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="openModal(${u.id})"><i class="bi bi-pencil me-1"></i>Edit</button>
+          </div>
+        </div>
+      </div>`;
+    }).join(''));
   });
 }
-function openModal(d){
-  $('#mtitle').text(d?'Edit User':'Add User'); $('#uid').val(d?.id||'');
-  $('#u-username').val(d?.username||'').prop('disabled',!!d);
-  $('#u-fullname').val(d?.full_name||''); $('#u-password').val('');
-  $('#u-role').val(d?.role||'staff'); $('#pw-hint').toggle(!!d);
-  modal.show();
+
+function getPermsFromForm() {
+  const perms = {};
+  PERMS.forEach(p => { perms[p.key] = $(`#perm-${p.key}`).is(':checked'); });
+  return perms;
 }
-$('#btn-add').on('click',()=>openModal(null));
-$('#btn-edit').on('click',()=>{if(!sel){toast('Select a user','error');return;}openModal(sel);});
-$('#btn-save').on('click',()=>{
-  const id=$('#uid').val(), body={username:$('#u-username').val().trim(),full_name:$('#u-fullname').val().trim(),role:$('#u-role').val(),password:$('#u-password').val()};
-  if(!id&&!body.password){toast('Password required for new users','error');return;}
-  if(!id&&!body.username){toast('Username required','error');return;}
-  (id?apiU('/api/users/'+id,body):apiP('/api/users',body))
-    .done(()=>{modal.hide();toast(id?'Updated!':'User created!');load();})
-    .fail(r=>toast(r.responseJSON?.error||'Error','error'));
+
+function openModal(id=null) {
+  const u = id ? users.find(x=>x.id===id) : null;
+  let perms = {};
+  if (u) { try { perms = JSON.parse(u.permissions||'{}'); } catch(e){} }
+
+  $('#u-modal-title').html(u ? '<i class="bi bi-pencil me-2"></i>Edit User' : '<i class="bi bi-person-plus me-2"></i>Add User');
+  $('#u-id').val(u?.id||'');
+  $('#u-fullname').val(u?.full_name||'');
+  $('#u-username').val(u?.username||'');
+  $('#u-password').val('');
+  $('#u-pw-hint').text(u ? '(leave blank to keep current)' : '(required)');
+  $('#u-role').val(u?.role||'staff');
+  $('#u-active').prop('checked', u ? !!u.is_active : true);
+  $('#btn-del-user').toggle(!!u);
+
+  // Render permission toggles
+  $('#u-perms-grid').html(PERMS.map(p => {
+    const checked = perms[p.key] !== undefined ? perms[p.key] : true;
+    return `<div class="col-6 col-md-3">
+      <div class="form-check form-switch perm-toggle-row">
+        <input class="form-check-input" type="checkbox" id="perm-${p.key}" ${checked?'checked':''}>
+        <label class="form-check-label perm-label" for="perm-${p.key}">
+          <i class="bi ${p.icon} me-1 text-accent"></i>${p.label}
+        </label>
+      </div>
+    </div>`;
+  }).join(''));
+
+  // Show/hide perms section based on role
+  $('#u-role').trigger('change');
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('#modalUser')).show();
+}
+
+$('#u-role').on('change', function() {
+  $('#u-perms-section').toggle($(this).val() === 'staff');
 });
-$('#btn-del').on('click',()=>{
-  if(!sel){toast('Select a user','error');return;}
-  if(!confirm('Delete user "'+sel.username+'"?'))return;
-  apiD('/api/users/'+sel.id).done(()=>{sel=null;toast('Deleted');load();}).fail(r=>toast(r.responseJSON?.error||'Error','error'));
+
+$('#btn-save-user').on('click', () => {
+  const id = $('#u-id').val();
+  if (!id && !$('#u-password').val()) { toast('Password required for new user','error'); return; }
+  if (!$('#u-username').val().trim()) { toast('Username required','error'); return; }
+  const d = {
+    full_name: $('#u-fullname').val().trim(), username: $('#u-username').val().trim(),
+    role: $('#u-role').val(), is_active: $('#u-active').is(':checked'),
+    permissions: getPermsFromForm(),
+  };
+  if ($('#u-password').val()) d.password = $('#u-password').val();
+  const req = id ? apiU('/api/users/'+id, d) : apiP('/api/users', d);
+  req.done(() => {
+    bootstrap.Modal.getInstance('#modalUser')?.hide();
+    toast(id ? 'User updated!' : 'User created!'); load();
+  }).fail(r => toast(r.responseJSON?.error||'Error','error'));
 });
+
+$('#btn-del-user').on('click', () => {
+  const id = $('#u-id').val();
+  confirm_action('Delete this user? This cannot be undone.', () => {
+    apiD('/api/users/'+id).done(() => {
+      bootstrap.Modal.getInstance('#modalUser')?.hide();
+      toast('User deleted'); load();
+    }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+  });
+});
+
 load();
 </script>
 {% endblock %}

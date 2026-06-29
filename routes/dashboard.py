@@ -19,7 +19,6 @@ def api_dashboard():
             "SELECT ref,name,qty,min_stock FROM products WHERE qty <= min_stock ORDER BY qty"
         ).fetchall())
 
-        # Real pending payments = unpaid/partial balance across BOTH sales and repairs
         pending_sales_balance = c.execute(
             "SELECT COALESCE(SUM(total - amount_paid),0) FROM sales WHERE payment_status != 'paid'"
         ).fetchone()[0]
@@ -33,16 +32,16 @@ def api_dashboard():
         ).fetchone()[0]
 
         return jsonify({
-            "products":            c.execute("SELECT COUNT(*) FROM products").fetchone()[0],
-            "customers":           c.execute("SELECT COUNT(*) FROM customers").fetchone()[0],
-            "suppliers":           c.execute("SELECT COUNT(*) FROM suppliers").fetchone()[0],
-            "bikes":               c.execute("SELECT COUNT(*) FROM bikes").fetchone()[0],
-            "sales_today":         c.execute("SELECT COALESCE(SUM(total),0) FROM sales WHERE created_at LIKE ?", (f"{today}%",)).fetchone()[0],
-            "repairs_open":        c.execute("SELECT COUNT(*) FROM repairs WHERE status != 'done'").fetchone()[0],
-            "low_stock_count":     len(low_stock_list),
-            "pending_invoices":    pending_count,
-            "pending_balance":     round(pending_sales_balance + pending_repairs_balance, 2),
-            "low_stock":           low_stock_list,
+            "products":         c.execute("SELECT COUNT(*) FROM products").fetchone()[0],
+            "customers":        c.execute("SELECT COUNT(*) FROM customers").fetchone()[0],
+            "suppliers":        c.execute("SELECT COUNT(*) FROM suppliers").fetchone()[0],
+            "bikes":            c.execute("SELECT COUNT(*) FROM bikes").fetchone()[0],
+            "sales_today":      c.execute("SELECT COALESCE(SUM(total),0) FROM sales WHERE created_at LIKE ?", (f"{today}%",)).fetchone()[0],
+            "repairs_open":     c.execute("SELECT COUNT(*) FROM repairs WHERE status NOT IN ('done','cancelled')").fetchone()[0],
+            "low_stock_count":  len(low_stock_list),
+            "pending_invoices": pending_count,
+            "pending_balance":  round(pending_sales_balance + pending_repairs_balance, 2),
+            "low_stock":        low_stock_list,
             "recent_sales": rows(c.execute("""
                 SELECT s.id, s.invoice_number, COALESCE(cu.name,'Walk-in') as customer,
                        s.total, s.created_at, s.payment_status,
@@ -50,7 +49,7 @@ def api_dashboard():
                 FROM sales s
                 LEFT JOIN customers cu ON s.customer_id=cu.id
                 LEFT JOIN users u      ON s.user_id=u.id
-                ORDER BY s.id DESC LIMIT 5""").fetchall()),
+                ORDER BY s.id DESC LIMIT 6""").fetchall()),
             "recent_repairs": rows(c.execute("""
                 SELECT r.id, r.invoice_number, COALESCE(cu.name,'—') as customer,
                        COALESCE(b.brand || ' ' || COALESCE(b.model,''), r.vehicle, '—') as vehicle,
@@ -58,5 +57,5 @@ def api_dashboard():
                 FROM repairs r
                 LEFT JOIN customers cu ON r.customer_id=cu.id
                 LEFT JOIN bikes b      ON r.bike_id=b.id
-                ORDER BY r.id DESC LIMIT 5""").fetchall()),
+                ORDER BY r.id DESC LIMIT 6""").fetchall()),
         })

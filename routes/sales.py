@@ -7,9 +7,6 @@ import io
 
 sales_bp = Blueprint("sales", __name__)
 
-PAYMENT_METHODS = ["cash", "card", "bank_transfer", "mixed"]
-PAYMENT_STATUSES = ["paid", "partial", "unpaid"]
-
 @sales_bp.route("/sales")
 @login_required
 def page():
@@ -20,7 +17,6 @@ def page():
 def get_sales():
     from_date = request.args.get("from_date") or ""
     to_date   = request.args.get("to_date") or date.today().isoformat()
-
     base_select = """
         SELECT s.id, s.invoice_number, COALESCE(cu.name,'Walk-in') as customer,
                s.total, s.discount, s.note, s.created_at,
@@ -31,16 +27,13 @@ def get_sales():
         LEFT JOIN customers cu ON s.customer_id=cu.id
         LEFT JOIN users u      ON s.user_id=u.id
     """
-
     with get_db() as c:
         if from_date:
             data = rows(c.execute(
                 base_select + " WHERE DATE(s.created_at) BETWEEN ? AND ? ORDER BY s.id DESC",
-                (from_date, to_date)
-            ).fetchall())
+                (from_date, to_date)).fetchall())
         else:
             data = rows(c.execute(base_select + " ORDER BY s.id DESC LIMIT 200").fetchall())
-
     return jsonify(data)
 
 @sales_bp.route("/api/sales/<int:sid>", methods=["GET"])
@@ -72,15 +65,14 @@ def add_sale():
         return jsonify({"error": "No items"}), 400
 
     discount       = float(d.get("discount", 0))
-    total          = max(sum(float(i["qty"]) * float(i["unit_price"]) for i in items) - discount, 0)
+    subtotal       = sum(float(i["qty"]) * float(i["unit_price"]) for i in items)
+    total          = max(subtotal - discount, 0)
     payment_method = d.get("payment_method") or "cash"
     payment_status = d.get("payment_status") or "paid"
     amount_paid    = float(d.get("amount_paid", total if payment_status == "paid" else 0))
 
-    if payment_status == "paid":
-        amount_paid = total
-    elif payment_status == "unpaid":
-        amount_paid = 0
+    if payment_status == "paid":   amount_paid = total
+    elif payment_status == "unpaid": amount_paid = 0
 
     with get_db() as c:
         for item in items:
@@ -89,7 +81,6 @@ def add_sale():
                 return jsonify({"error": f"Not enough stock for product #{item['product_id']}"}), 400
 
         invoice_number = next_invoice_number(c, "sales", "INV")
-
         c.execute("""INSERT INTO sales
                      (invoice_number,customer_id,user_id,total,discount,
                       payment_method,payment_status,amount_paid,note)
@@ -101,15 +92,14 @@ def add_sale():
             c.execute("INSERT INTO sale_items (sale_id,product_id,qty,unit_price) VALUES (?,?,?,?)",
                       (sid, item["product_id"], item["qty"], item["unit_price"]))
             c.execute("UPDATE products SET qty = qty - ? WHERE id=?", (item["qty"], item["product_id"]))
-            if d.get("customer_id"):
-                c.execute("UPDATE customers SET ts = ts + ? WHERE id=?", (total, d["customer_id"]))
+        if d.get("customer_id"):
+            c.execute("UPDATE customers SET ts = ts + ? WHERE id=?", (total, d["customer_id"]))
 
     return jsonify({"id": sid, "invoice_number": invoice_number, "total": total}), 201
 
 @sales_bp.route("/api/sales/<int:sid>/payment", methods=["PUT"])
 @login_required
 def update_payment(sid):
-    """Update payment status/amount for an existing sale (e.g. customer pays off balance later)."""
     d = request.json
     with get_db() as c:
         sale = c.execute("SELECT total FROM sales WHERE id=?", (sid,)).fetchone()
@@ -124,6 +114,10 @@ def update_payment(sid):
 @sales_bp.route("/api/sales/<int:sid>/invoice.pdf", methods=["GET"])
 @login_required
 def sale_invoice_pdf(sid):
+    # Accept optional overrides from query params (editable before printing)
+    override_note  = request.args.get("note")
+    override_disc  = request.args.get("discount")
+
     with get_db() as c:
         sale = c.execute("""
             SELECT s.*, cu.name as customer_name, cu.phone as customer_phone,
@@ -144,6 +138,11 @@ def sale_invoice_pdf(sid):
     if sale["customer_name"]:
         customer = {"name": sale["customer_name"], "phone": sale["customer_phone"], "address": sale["customer_address"]}
 
+    note     = override_note if override_note is not None else (sale["note"] or "")
+    discount = float(override_disc) if override_disc is not None else sale["discount"]
+    subtotal = sum(it["qty"] * it["unit_price"] for it in items)
+    total    = max(subtotal - discount, 0)
+
     line_items = [{"description": it["product_name"], "qty": it["qty"], "unit_price": it["unit_price"]} for it in items]
 
     pdf_bytes = build_invoice_pdf(
@@ -151,12 +150,12 @@ def sale_invoice_pdf(sid):
         doc_type="Sale Invoice",
         customer=customer,
         line_items=line_items,
-        discount=sale["discount"],
-        total=sale["total"],
+        discount=discount,
+        total=total,
         amount_paid=sale["amount_paid"],
         payment_status=sale["payment_status"],
         payment_method=sale["payment_method"],
-        note=sale["note"] or "",
+        note=note,
         staff=sale["seller"],
         created_at=(sale["created_at"] or "")[:16],
     )

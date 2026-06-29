@@ -22,8 +22,13 @@ def get_suppliers():
 @login_required
 def add_supplier():
     d = request.json
+    if not d.get("name"):
+        return jsonify({"error": "Name is required"}), 400
     with get_db() as c:
-        c.execute("INSERT INTO suppliers (name,phone,email,address,notes) VALUES (:name,:phone,:email,:address,:notes)", d)
+        c.execute("INSERT INTO suppliers (name,phone,email,address,notes) VALUES (:name,:phone,:email,:address,:notes)", {
+            "name": d.get("name",""), "phone": d.get("phone",""),
+            "email": d.get("email",""), "address": d.get("address",""), "notes": d.get("notes","")
+        })
         sid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
     return jsonify({"id": sid}), 201
 
@@ -32,7 +37,10 @@ def add_supplier():
 def update_supplier(sid):
     d = request.json; d["id"] = sid
     with get_db() as c:
-        c.execute("UPDATE suppliers SET name=:name,phone=:phone,email=:email,address=:address,notes=:notes WHERE id=:id", d)
+        c.execute("UPDATE suppliers SET name=:name,phone=:phone,email=:email,address=:address,notes=:notes WHERE id=:id", {
+            "id": sid, "name": d.get("name",""), "phone": d.get("phone",""),
+            "email": d.get("email",""), "address": d.get("address",""), "notes": d.get("notes","")
+        })
     return jsonify({"ok": True})
 
 @suppliers_bp.route("/api/suppliers/<int:sid>", methods=["DELETE"])

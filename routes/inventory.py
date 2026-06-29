@@ -29,7 +29,7 @@ def add_product():
                          VALUES (:ref,:name,:category,:brand,:qty,:buy_price,:sell_price,:min_stock)""", d)
             pid = c.execute("SELECT last_insert_rowid()").fetchone()[0]
         except sqlite3.IntegrityError:
-            return jsonify({"error": "Ref already exists"}), 409
+            return jsonify({"error": "Reference already exists"}), 409
     return jsonify({"id": pid}), 201
 
 @inventory_bp.route("/api/products/<int:pid>", methods=["PUT"])

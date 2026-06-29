@@ -1,64 +1,179 @@
 {% extends "base.html" %}
 {% set active = "purchases" %}
 {% block title %}Purchases{% endblock %}
-{% block page_title %}🛒 Purchases{% endblock %}
+{% block page_title %}<i class="bi bi-cart-plus me-2 text-accent"></i>Purchases{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <span class="fw-bold" style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem">Purchases / Restocking</span>
-  <button class="btn btn-danger btn-sm" id="btn-add">＋ Add Purchase</button>
+<div class="page-header">
+  <h1>Purchases</h1>
+  <button class="btn btn-danger btn-sm" onclick="openModal()"><i class="bi bi-plus-lg me-1"></i>New Purchase</button>
 </div>
-<div class="zmoto-card table-responsive">
-  <table class="table table-hover mb-0">
-    <thead><tr><th>#</th><th>Supplier</th><th>Product</th><th>Ref</th><th>Qty</th><th>Unit</th><th>Total</th><th>By</th><th>Note</th><th>Date</th></tr></thead>
-    <tbody id="tbl"></tbody>
+<div class="zmoto-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label">From</label><input class="form-control form-control-sm" id="pu-from" type="date"></div>
+    <div class="col-md-3"><label class="form-label">To</label><input class="form-control form-control-sm" id="pu-to" type="date"></div>
+    <div class="col-md-2"><button class="btn btn-danger btn-sm w-100 mt-3" id="btn-filter-pu"><i class="bi bi-funnel me-1"></i>Filter</button></div>
+    <div class="col-auto ms-auto mt-3"><span class="text-muted-sm" id="pu-count"></span></div>
+  </div>
+</div>
+<div class="table-responsive">
+  <table class="table">
+    <thead><tr><th>PO #</th><th>Date</th><th>Product</th><th>Supplier</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Buyer</th><th></th></tr></thead>
+    <tbody id="pu-tbody"><tr><td colspan="9" class="text-center py-4 text-muted-sm"><div class="spinner-border spinner-border-sm text-danger me-2"></div>Loading…</td></tr></tbody>
   </table>
 </div>
-<div class="modal fade" id="modalPur" tabindex="-1">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title">Add Purchase</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-      <div class="mb-2"><label class="form-label">Supplier</label><select class="form-select" id="pur-sup"><option value="">— None —</option></select></div>
-      <div class="mb-2"><label class="form-label">Product *</label><select class="form-select" id="pur-prod"></select></div>
-      <div class="row g-2 mb-2">
-        <div class="col-6"><label class="form-label">Qty *</label><input class="form-control" id="pur-qty" type="number" min="1" value="1"></div>
-        <div class="col-6"><label class="form-label">Unit Price (TND)</label><input class="form-control" id="pur-price" type="number" step="0.01" value="0"></div>
+
+<!-- Modal -->
+<div class="modal fade" id="modalPurchase" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title"><i class="bi bi-cart-plus me-2"></i>New Purchase Order</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Product *</label>
+            <div class="search-wrap">
+              <input class="form-control form-control-sm" id="pu-prod-search" placeholder="Search product…" autocomplete="off">
+              <div class="prod-search-list" id="pu-prod-list" style="display:none"></div>
+            </div>
+            <div id="pu-prod-selected" class="text-muted-sm mt-1" style="display:none">
+              <i class="bi bi-box text-accent me-1"></i><span id="pu-prod-name"></span>
+              <button class="btn btn-link btn-sm text-danger p-0 ms-2" onclick="clearPuProduct()">✕</button>
+            </div>
+            <input type="hidden" id="pu-prod-id">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Supplier (optional)</label>
+            <div class="search-wrap">
+              <input class="form-control form-control-sm" id="pu-supp-search" placeholder="Search supplier…" autocomplete="off">
+              <div class="prod-search-list" id="pu-supp-list" style="display:none"></div>
+            </div>
+            <div id="pu-supp-selected" class="text-muted-sm mt-1" style="display:none">
+              <i class="bi bi-building text-accent me-1"></i><span id="pu-supp-name"></span>
+              <button class="btn btn-link btn-sm text-danger p-0 ms-2" onclick="clearPuSupplier()">✕</button>
+            </div>
+            <input type="hidden" id="pu-supp-id">
+          </div>
+          <div class="col-md-4"><label class="form-label">Quantity *</label><input class="form-control form-control-sm" id="pu-qty" type="number" min="1" value="1"></div>
+          <div class="col-md-4"><label class="form-label">Unit Price (TND) *</label><input class="form-control form-control-sm" id="pu-price" type="number" min="0" step="0.001" value="0"></div>
+          <div class="col-md-4"><label class="form-label">Total (auto)</label><input class="form-control form-control-sm" id="pu-total" type="text" readonly></div>
+          <div class="col-12"><label class="form-label">Note</label><textarea class="form-control form-control-sm" id="pu-note" rows="2"></textarea></div>
+        </div>
       </div>
-      <div class="mb-2"><label class="form-label">Note</label><input class="form-control" id="pur-note"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="btn-save-purchase"><i class="bi bi-check-lg me-1"></i>Confirm Purchase</button>
+      </div>
     </div>
-    <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button class="btn btn-danger btn-sm" id="btn-save">Save</button></div>
-  </div></div>
+  </div>
 </div>
 {% endblock %}
 {% block extra_js %}
 <script>
-const modal = new bootstrap.Modal('#modalPur');
-function load() {
-  apiG('/api/purchases').done(rows => {
-    const $t=$('#tbl').empty();
-    rows.length ? rows.forEach(r=>$t.append(`<tr><td>${r.id}</td><td>${r.supplier}</td><td>${r.product}</td><td>${r.ref}</td><td>${r.qty}</td><td>${fmt(r.unit_price)}</td><td>${fmt(r.total)}</td><td>${r.buyer}</td><td>${r.note||'—'}</td><td>${(r.created_at||'').slice(0,10)}</td></tr>`))
-              : $t.append('<tr><td colspan="10" class="text-center text-muted py-4">No purchases yet</td></tr>');
-  });
-}
-$('#btn-add').on('click',()=>{
-  $.when(apiG('/api/suppliers'),apiG('/api/products')).done(function(sr,pr){
-    const $s=$('#pur-sup').empty().append('<option value="">— None —</option>');
-    sr[0].forEach(s=>$s.append(`<option value="${s.id}">${s.name}</option>`));
-    const $p=$('#pur-prod').empty();
-    pr[0].forEach(p=>$p.append(`<option value="${p.id}">${p.ref} — ${p.name}</option>`));
-    $('#pur-qty').val(1);$('#pur-price').val(0);$('#pur-note').val('');
-    modal.show();
-  });
-});
-$('#btn-save').on('click',()=>{
-  const body={supplier_id:$('#pur-sup').val()||null,product_id:parseInt($('#pur-prod').val()),qty:parseInt($('#pur-qty').val()),unit_price:parseFloat($('#pur-price').val())||0,note:$('#pur-note').val()};
-  if(!body.product_id||!body.qty){toast('Product and Qty required','error');return;}
-  apiP('/api/purchases',body).done(()=>{modal.hide();toast('Purchase saved! Stock updated.');load();});
-});
-load();
+let puProduct = null, puSupplier = null;
 
-// Auto-open Add modal when arriving from dashboard quick action
-if (new URLSearchParams(window.location.search).get('action') === 'add') {
-  setTimeout(() => $('#btn-add').trigger('click'), 150);
+function load() {
+  const from = $('#pu-from').val(), to = $('#pu-to').val();
+  const url = from ? `/api/purchases?from_date=${from}&to_date=${to}` : '/api/purchases';
+  $.getJSON(url, data => {
+    $('#pu-count').text(data.length + ' purchases');
+    if (!data.length) { $('#pu-tbody').html('<tr><td colspan="9" class="text-center py-4 text-muted-sm">No purchases found</td></tr>'); return; }
+    let totalSpend = 0;
+    const rows = data.map(p => { totalSpend += p.total||0; return `<tr>
+      <td class="mono text-accent">${p.invoice_number||'—'}</td>
+      <td class="text-muted-sm">${(p.created_at||'').slice(0,16)}</td>
+      <td><strong>${p.product}</strong> <small class="text-muted-sm">${p.ref}</small></td>
+      <td>${p.supplier||'—'}</td>
+      <td>${p.qty}</td>
+      <td class="mono">${fmt2(p.unit_price)} TND</td>
+      <td class="mono">${fmt2(p.total)} TND</td>
+      <td class="text-muted-sm">${p.buyer||'—'}</td>
+      <td><button class="btn btn-sm btn-outline-danger py-0" onclick="delPurchase(${p.id})"><i class="bi bi-trash"></i></button></td>
+    </tr>`; }).join('');
+    $('#pu-tbody').html(rows + `<tr style="background:var(--th-bg)"><td colspan="6" class="text-end fw-bold">Total Spend:</td><td class="mono fw-bold text-accent">${fmt2(totalSpend)} TND</td><td colspan="2"></td></tr>`);
+  });
 }
+$('#btn-filter-pu').on('click', load);
+
+function delPurchase(id) {
+  confirm_action('Delete this purchase? Stock will be reduced.', () => {
+    apiD('/api/purchases/'+id).done(() => { toast('Purchase deleted'); load(); })
+      .fail(r => toast(r.responseJSON?.error||'Error','error'));
+  });
+}
+
+$('#pu-qty, #pu-price').on('input', () => {
+  const t = (parseFloat($('#pu-qty').val()||0) * parseFloat($('#pu-price').val()||0));
+  $('#pu-total').val(fmt2(t) + ' TND');
+});
+
+// Product search
+let puProdTimer;
+$('#pu-prod-search').on('input', function() {
+  clearTimeout(puProdTimer);
+  const q = $(this).val().trim(); if (!q) { $('#pu-prod-list').hide(); return; }
+  puProdTimer = setTimeout(() => {
+    $.getJSON('/api/products?q='+encodeURIComponent(q), data => {
+      if (!data.length) { $('#pu-prod-list').hide(); return; }
+      $('#pu-prod-list').html(data.map(p =>
+        `<div class="psl-item" data-id="${p.id}" data-name="${p.name.replace(/"/g,'&quot;')}" data-price="${p.buy_price}">
+          <span>${p.name} <small>${p.ref}</small></span>
+          <span class="text-muted-sm">Stock: ${p.qty} — Buy: ${fmt2(p.buy_price)} TND</span>
+        </div>`).join('')).show();
+    });
+  }, 250);
+});
+$(document).on('click', '#pu-prod-list .psl-item', function() {
+  puProduct = { id: +$(this).data('id'), name: $(this).data('name') };
+  $('#pu-prod-id').val(puProduct.id); $('#pu-prod-name').text(puProduct.name);
+  $('#pu-prod-selected').show(); $('#pu-prod-search').val(''); $('#pu-prod-list').hide();
+  $('#pu-price').val($(this).data('price')).trigger('input');
+});
+function clearPuProduct() { puProduct = null; $('#pu-prod-id').val(''); $('#pu-prod-selected').hide(); }
+
+// Supplier search
+let puSuppTimer;
+$('#pu-supp-search').on('input', function() {
+  clearTimeout(puSuppTimer);
+  const q = $(this).val().trim(); if (!q) { $('#pu-supp-list').hide(); return; }
+  puSuppTimer = setTimeout(() => {
+    $.getJSON('/api/suppliers?q='+encodeURIComponent(q), data => {
+      if (!data.length) { $('#pu-supp-list').hide(); return; }
+      $('#pu-supp-list').html(data.map(s =>
+        `<div class="psl-item" data-id="${s.id}" data-name="${s.name.replace(/"/g,'&quot;')}">
+          <span>${s.name}</span><span class="text-muted-sm">${s.phone||''}</span>
+        </div>`).join('')).show();
+    });
+  }, 250);
+});
+$(document).on('click', '#pu-supp-list .psl-item', function() {
+  puSupplier = { id: +$(this).data('id'), name: $(this).data('name') };
+  $('#pu-supp-id').val(puSupplier.id); $('#pu-supp-name').text(puSupplier.name);
+  $('#pu-supp-selected').show(); $('#pu-supp-search').val(''); $('#pu-supp-list').hide();
+});
+function clearPuSupplier() { puSupplier = null; $('#pu-supp-id').val(''); $('#pu-supp-selected').hide(); }
+
+function openModal() {
+  puProduct = null; puSupplier = null;
+  $('#pu-prod-id,#pu-supp-id').val(''); $('#pu-prod-selected,#pu-supp-selected').hide();
+  $('#pu-prod-search,#pu-supp-search').val(''); $('#pu-qty').val(1); $('#pu-price').val(0); $('#pu-total').val('0.000 TND'); $('#pu-note').val('');
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('#modalPurchase')).show();
+}
+$('#btn-save-purchase').on('click', () => {
+  if (!$('#pu-prod-id').val()) { toast('Select a product','error'); return; }
+  const qty = parseInt($('#pu-qty').val()||0);
+  if (qty <= 0) { toast('Quantity must be > 0','error'); return; }
+  apiP('/api/purchases', {
+    product_id: +$('#pu-prod-id').val(), supplier_id: +$('#pu-supp-id').val() || null,
+    qty, unit_price: parseFloat($('#pu-price').val()||0), note: $('#pu-note').val(),
+  }).done(res => {
+    bootstrap.Modal.getInstance('#modalPurchase')?.hide();
+    toast('Purchase saved! PO: ' + res.invoice_number); load();
+  }).fail(r => toast(r.responseJSON?.error||'Error','error'));
+});
+$(document).on('click', e => {
+  if (!$(e.target).closest('.search-wrap').length) $('#pu-prod-list,#pu-supp-list').hide();
+});
+const today = new Date().toISOString().slice(0,10);
+$('#pu-to').val(today); load();
 </script>
 {% endblock %}
