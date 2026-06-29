@@ -127,19 +127,29 @@ function openModal(id=null) {
   // Render permission toggles
   $('#u-perms-grid').html(PERMS.map(p => {
     const checked = perms[p.key] !== undefined ? perms[p.key] : true;
-    return `<div class="col-6 col-md-3">
-      <div class="form-check form-switch perm-toggle-row">
-        <input class="form-check-input" type="checkbox" id="perm-${p.key}" ${checked?'checked':''}>
-        <label class="form-check-label perm-label" for="perm-${p.key}">
-          <i class="bi ${p.icon} me-1 text-accent"></i>${p.label}
-        </label>
-      </div>
-    </div>`;
+    return `
+      <div class="col-md-6">
+          <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2 h-100">
+              <label class="mb-0 d-flex align-items-center" for="perm-${p.key}">
+                  <i class="bi ${p.icon} me-2 text-accent"></i>
+                  ${p.label}
+              </label>
+
+              <div class="form-check form-switch m-0">
+                  <input
+                      class="form-check-input"
+                      type="checkbox"
+                      id="perm-${p.key}"
+                      ${checked ? "checked" : ""}
+                  >
+              </div>
+          </div>
+      </div>`;
   }).join(''));
 
   // Show/hide perms section based on role
   $('#u-role').trigger('change');
-  bootstrap.Modal.getOrCreateInstance(document.getElementById('#modalUser')).show();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalUser')).show();
 }
 
 $('#u-role').on('change', function() {
@@ -158,7 +168,7 @@ $('#btn-save-user').on('click', () => {
   if ($('#u-password').val()) d.password = $('#u-password').val();
   const req = id ? apiU('/api/users/'+id, d) : apiP('/api/users', d);
   req.done(() => {
-    bootstrap.Modal.getInstance('#modalUser')?.hide();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalUser')).hide();
     toast(id ? 'User updated!' : 'User created!'); load();
   }).fail(r => toast(r.responseJSON?.error||'Error','error'));
 });
@@ -167,7 +177,7 @@ $('#btn-del-user').on('click', () => {
   const id = $('#u-id').val();
   confirm_action('Delete this user? This cannot be undone.', () => {
     apiD('/api/users/'+id).done(() => {
-      bootstrap.Modal.getInstance('#modalUser')?.hide();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('modalUser')).hide();
       toast('User deleted'); load();
     }).fail(r => toast(r.responseJSON?.error||'Error','error'));
   });
